@@ -14,6 +14,17 @@ firebase.initializeApp(firebaseConfig);
 // Inicializar Firestore
 const db = firebase.firestore();
 
+// Teste de conexão com Firebase
+console.log('Testando conexão com Firebase...');
+db.collection('vendas').get()
+    .then(snapshot => {
+        console.log('Conexão com Firebase OK!');
+        console.log('Número de vendas:', snapshot.size);
+    })
+    .catch(error => {
+        console.error('Erro na conexão com Firebase:', error);
+    });
+
 // Função para carregar vendas do Firestore
 async function carregarVendas() {
     try {
