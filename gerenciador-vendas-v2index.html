@@ -1,0 +1,2184 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Vendas de Assinaturas v2</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    
+    <!-- EmailJS -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script>
+        (function() {
+            emailjs.init({
+                publicKey: "hOEhCYJwa_99mn944", // Sua chave pública
+            });
+        })();
+    </script>
+
+    <style>
+        :root {
+            --cor-lucro: #28a745;
+            --cor-custo: #dc3545;
+            --cor-venda: #0d6efd;
+        }
+
+        .currency::before {
+            content: '₪';
+            margin-right: 2px;
+        }
+
+        .valor-lucro { 
+            color: var(--cor-lucro);
+            font-weight: bold;
+        }
+
+        .valor-custo { 
+            color: var(--cor-custo);
+            font-weight: bold;
+        }
+
+        .valor-venda {
+            color: var(--cor-venda);
+            font-weight: bold;
+        }
+
+        .grupo-mes {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #0d6efd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .grupo-mes[dir="rtl"] {
+            border-left: none;
+            border-right: 4px solid #0d6efd;
+        }
+
+        .anotacao-preview {
+            max-height: 50px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .badge {
+            font-size: 0.9em;
+            padding: 5px 10px;
+        }
+
+        .debug-info {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .table th {
+            white-space: nowrap;
+            background-color: #f8f9fa;
+        }
+
+        .btn-group-sm > .btn, .btn-sm {
+            padding: .25rem .5rem;
+            font-size: .875rem;
+            line-height: 1.5;
+            border-radius: .2rem;
+        }
+
+        .selecao-venda:checked + label {
+            background-color: #e9ecef;
+        }
+
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .success-feedback, .error-feedback {
+            display: none;
+            margin-left: 10px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .success-feedback {
+            color: var(--cor-lucro);
+            background-color: rgba(40, 167, 69, 0.1);
+        }
+
+        .error-feedback {
+            color: var(--cor-custo);
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        [dir="rtl"] .ms-2 {
+            margin-right: 0.5rem !important;
+            margin-left: 0 !important;
+        }
+
+        [dir="rtl"] .me-1 {
+            margin-left: 0.25rem !important;
+            margin-right: 0 !important;
+        }
+
+        .btn-idioma {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        [dir="rtl"] .btn-idioma {
+            right: auto;
+            left: 20px;
+        }
+
+        .compartilhar-btns {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-whatsapp {
+            background-color: #25D366;
+            color: white;
+        }
+
+        .btn-whatsapp:hover {
+            background-color: #128C7E;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .table-responsive {
+                font-size: 14px;
+            }
+            .btn-sm {
+                padding: .2rem .4rem;
+                font-size: .75rem;
+            }
+            .container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Botão de Idioma -->
+    <button class="btn btn-outline-primary btn-idioma" onclick="alternarIdioma()">
+        <i class="bi bi-translate"></i> PT/עב
+    </button>
+
+    <!-- Debug Info -->
+    <div id="debugInfo" class="debug-info"></div>
+
+    <div class="container mt-4">
+        <h1 class="text-center mb-4" data-translate="titulo">Gerenciador de Vendas de Assinaturas</h1>
+
+        <!-- Formulário de Cadastro -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 data-translate="novaVenda">Nova Venda</h4>
+            </div>
+            <div class="card-body">
+                <form id="vendaForm" novalidate>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label" data-translate="produto">Nome do Produto</label>
+                            <select class="form-control" id="nomeProduto" required>
+                                <option value="" data-translate="selecioneProduto">Selecione um produto</option>
+                                <optgroup label="Streaming">
+                                    <option value="Netflix">Netflix</option>
+                                    <option value="Disney+">Disney+</option>
+                                    <option value="HBO Max">HBO Max</option>
+                                    <option value="Amazon Prime">Amazon Prime</option>
+                                    <option value="Apple TV+">Apple TV+</option>
+                                    <option value="Paramount+">Paramount+</option>
+                                    <option value="Star+">Star+</option>
+                                    <option value="Discovery+">Discovery+</option>
+                                </optgroup>
+                                <optgroup label="Música">
+                                    <option value="Spotify">Spotify</option>
+                                    <option value="YouTube Premium">YouTube Premium</option>
+                                    <option value="Deezer">Deezer</option>
+                                    <option value="Apple Music">Apple Music</option>
+                                    <option value="Amazon Music">Amazon Music</option>
+                                </optgroup>
+                                <optgroup label="VPN">
+                                    <option value="NordVPN">NordVPN</option>
+                                    <option value="ExpressVPN">ExpressVPN</option>
+                                    <option value="CyberGhost">CyberGhost</option>
+                                </optgroup>
+                                <option value="Outro" data-translate="outro">Outro...</option>
+                            </select>
+                            <input type="text" class="form-control mt-2" id="outroNomeProduto" style="display: none;" 
+                                   data-translate-placeholder="digiteProduto" placeholder="Digite o nome do produto">
+                            <div class="invalid-feedback" data-translate="produtoObrigatorio">Por favor, selecione um produto</div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label" data-translate="duracao">Duração</label>
+                            <select class="form-control" id="duracaoProduto" required>
+                                <option value="" data-translate="selecioneDuracao">Selecione a duração</option>
+                                <option value="1" data-translate="umMes">1 mês</option>
+                                <option value="3" data-translate="tresMeses">3 meses</option>
+                                <option value="6" data-translate="seisMeses">6 meses</option>
+                                <option value="12" data-translate="umAno">1 ano</option>
+                                <option value="24" data-translate="doisAnos">2 anos</option>
+                                <option value="36" data-translate="tresAnos">3 anos</option>
+                                <option value="forever" data-translate="paraSempre">Para sempre</option>
+                                <option value="custom" data-translate="personalizado">Personalizado...</option>
+                            </select>
+                            <input type="number" class="form-control mt-2" id="duracaoPersonalizada" style="display: none;" 
+                                   min="1" max="60" data-translate-placeholder="digiteMeses" placeholder="Digite o número de meses">
+                            <div class="invalid-feedback" data-translate="duracaoObrigatoria">Por favor, selecione a duração</div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label" data-translate="origem">Origem do Produto</label>
+                            <input type="text" class="form-control" id="origemProduto" required>
+                            <div class="invalid-feedback" data-translate="origemObrigatoria">Por favor, informe a origem do produto</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" data-translate="nomeComprador">Nome do Comprador</label>
+                            <input type="text" class="form-control" id="nomeComprador" required>
+                            <div class="invalid-feedback" data-translate="nomeObrigatorio">Por favor, informe o nome do comprador</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" data-translate="numeroSerial">Número Serial/Conta (opcional)</label>
+                            <input type="text" class="form-control" id="numeroSerial">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label" data-translate="emailComprador">Email do Comprador (opcional)</label>
+                            <input type="email" class="form-control" id="emailComprador">
+                            <div class="invalid-feedback" data-translate="emailInvalido">Por favor, informe um email válido</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label" data-translate="telefoneComprador">Telefone do Comprador (opcional)</label>
+                            <input type="tel" class="form-control" id="telefoneComprador" 
+                                   placeholder="+972 XX-XXX-XXXX">
+                            <div class="invalid-feedback" data-translate="telefoneInvalido">Por favor, informe um telefone válido</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label" data-translate="dataCompra">Data da Compra</label>
+                            <input type="date" class="form-control" id="dataCompra" required>
+                            <div class="invalid-feedback" data-translate="dataObrigatoria">Por favor, selecione a data da compra</div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label" data-translate="dataVencimento">Data de Vencimento</label>
+                            <input type="date" class="form-control" id="dataVencimento" required readonly>
+                            <div class="invalid-feedback" data-translate="dataObrigatoria">Por favor, selecione a data de vencimento</div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label" data-translate="comprovante">Comprovante</label>
+                            <input type="file" class="form-control" id="comprovante" accept="image/*">
+                            <div class="invalid-feedback" data-translate="arquivoGrande">Arquivo muito grande ou formato inválido</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label" data-translate="precoCusto">Preço de Custo (₪) (opcional)</label>
+                            <input type="number" class="form-control" id="precoCusto" min="0" step="0.01">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label" data-translate="precoVenda">Preço de Venda (₪)</label>
+                            <input type="number" class="form-control" id="precoVenda" required min="0" step="0.01">
+                            <div class="invalid-feedback" data-translate="precoObrigatorio">Por favor, informe o preço de venda</div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label" data-translate="lucro">Lucro (₪)</label>
+                            <input type="number" class="form-control" id="lucro" readonly>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label" data-translate="statusPagamento">Status do Pagamento</label>
+                            <select class="form-control" id="statusPagamento" required>
+                                <option value="pago" data-translate="pago">Pago</option>
+                                <option value="pendente" data-translate="pendente">Pendente</option>
+                            </select>
+                            <div class="invalid-feedback" data-translate="statusObrigatorio">Por favor, selecione o status do pagamento</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label" data-translate="anotacoes">Anotações</label>
+                            <textarea class="form-control" id="anotacoes" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <button type="submit" class="btn btn-primary" data-translate="salvar">Salvar Venda</button>
+                        <span class="success-feedback ms-2">
+                            <i class="bi bi-check-circle"></i> <span data-translate="vendaSalva">Venda salva com sucesso!</span>
+                        </span>
+                        <span class="error-feedback ms-2">
+                            <i class="bi bi-exclamation-circle"></i> <span data-translate="erroSalvar">Erro ao salvar venda</span>
+                        </span>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Buscador -->
+        <div class="mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="buscador" 
+                                   list="sugestoes-busca"
+                                   data-translate-placeholder="buscar"
+                                   placeholder="Buscar por produto, nome, email...">
+                            <datalist id="sugestoes-busca"></datalist>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <select class="form-select" id="tipoBusca">
+                                <option value="todos" data-translate="todosCampos">Todos os campos</option>
+                                <option value="produto" data-translate="produto">Produto</option>
+                                <option value="origem" data-translate="origem">Origem</option>
+                                <option value="serial" data-translate="numeroSerial">Número Serial/Conta</option>
+                                <option value="nome" data-translate="nomeComprador">Nome do Comprador</option>
+                                <option value="email" data-translate="email">Email</option>
+                                <option value="data" data-translate="data">Data</option>
+                                <option value="valor" data-translate="valor">Valor</option>
+                                <option value="status" data-translate="status">Status do Pagamento</option>
+                                <option value="anotacoes" data-translate="anotacoes">Anotações</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <input type="month" 
+                                   class="form-control" 
+                                   id="buscaPeriodo"
+                                   data-translate-title="buscarPeriodo"
+                                   title="Buscar por período">
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <button class="btn btn-primary w-100" id="btnBuscar">
+                                <i class="bi bi-search"></i> <span data-translate="buscar">Buscar</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resultados da Busca -->
+        <div id="resultadosBuscaContainer" style="display: none;" class="mb-4 fade-in">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0" data-translate="resultadosBusca">Resultados da Busca</h5>
+                    <span class="badge bg-primary">
+                        <span data-translate="encontrados">Encontrados</span>: <span id="numResultados">0</span>
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <input type="checkbox" class="form-check-input" id="selecionarTodosResultados">
+                                    </th>
+                                    <th data-translate="produto">Produto</th>
+                                    <th data-translate="nomeComprador">Nome/Contato</th>
+                                    <th data-translate="dataCompra">Data Compra</th>
+                                    <th data-translate="dataVencimento">Vencimento</th>
+                                    <th data-translate="comprovante">Comprovante</th>
+                                    <th data-translate="custo">Custo (₪)</th>
+                                    <th data-translate="venda">Venda (₪)</th>
+                                    <th data-translate="lucro">Lucro (₪)</th>
+                                    <th data-translate="status">Status</th>
+                                    <th data-translate="acoes">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultadosBusca">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div class="mb-4">
+            <button class="btn btn-success" id="btnExportar">
+                <i class="bi bi-file-excel"></i> <span data-translate="exportar">Exportar para Excel</span>
+            </button>
+            <button class="btn btn-danger ms-2" onclick="limparBancoDados()">
+                <i class="bi bi-trash"></i> <span data-translate="limparBanco">Limpar Banco de Dados</span>
+            </button>
+            <button class="btn btn-info ms-2" onclick="toggleDebug()">
+                <i class="bi bi-bug"></i> <span data-translate="debug">Debug Info</span>
+            </button>
+            <button class="btn btn-danger ms-2" id="excluirSelecionados" style="display: none;">
+                <i class="bi bi-trash"></i> <span data-translate="excluirSelecionados">Excluir Selecionados</span> 
+                (<span id="numSelecionados">0</span>)
+            </button>
+            <button class="btn btn-secondary ms-2" onclick="abrirConfiguracoes()">
+                <i class="bi bi-gear"></i> <span data-translate="configuracoes">Configurações</span>
+            </button>
+            <!-- Adicione este botão junto aos outros botões de ação -->
+            <button class="btn btn-primary ms-2" onclick="abrirBalanco()">
+                <i class="bi bi-graph-up"></i> <span data-translate="balanco">Balanço</span>
+            </button>
+        </div>
+
+        <!-- Tabela de Todas as Vendas -->
+        <div id="todasVendas">
+            <!-- Os grupos de meses serão inseridos aqui dinamicamente -->
+        </div>
+
+        <!-- Template para Grupo de Mês -->
+        <template id="templateGrupoMes">
+            <div class="grupo-mes mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <span class="mes-ano"></span>
+                            <span class="badge bg-secondary ms-2">
+                                <span data-translate="total">Total</span>: <span class="total-mes">0</span>
+                            </span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>
+                                            <input type="checkbox" class="form-check-input selecionar-mes">
+                                        </th>
+                                        <th data-translate="produto">Produto</th>
+                                        <th data-translate="nomeComprador">Nome/Contato</th>
+                                        <th data-translate="dataCompra">Data Compra</th>
+                                        <th data-translate="dataVencimento">Vencimento</th>
+                                        <th data-translate="comprovante">Comprovante</th>
+                                        <th data-translate="custo">Custo (₪)</th>
+                                        <th data-translate="venda">Venda (₪)</th>
+                                        <th data-translate="lucro">Lucro (₪)</th>
+                                        <th data-translate="status">Status</th>
+                                        <th data-translate="acoes">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="vendas-mes">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- Modal de Loading -->
+    <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden" data-translate="carregando">Carregando...</span>
+                    </div>
+                    <p class="mt-2 mb-0" data-translate="processando">Processando...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação -->
+    <div class="modal fade" id="confirmModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" data-translate="confirmacao">Confirmação</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-translate="cancelar">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="confirmAction" data-translate="confirmar">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Compartilhamento -->
+    <div class="modal fade" id="compartilharModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" data-translate="compartilhar">Compartilhar Venda</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="compartilhar-btns">
+                        <button class="btn btn-primary" onclick="compartilharVenda('email')">
+                            <i class="bi bi-envelope"></i> Email
+                        </button>
+                        <button class="btn btn-whatsapp" onclick="compartilharVenda('whatsapp')">
+                            <i class="bi bi-whatsapp"></i> WhatsApp
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Visualização de Comprovante -->
+    <div class="modal fade" id="comprovanteModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" data-translate="visualizarComprovante">Visualizar Comprovante</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="comprovanteImg" src="" class="img-fluid" alt="Comprovante">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Configuração -->
+    <div class="modal fade" id="configModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" data-translate="configuracoes">Configurações</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <h6 data-translate="produtosPreDeterminados">Produtos Pré-determinados</h6>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <input type="text" class="form-control" id="novoProduto" 
+                                       data-translate-placeholder="digiteProduto" 
+                                       placeholder="Digite o nome do produto">
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-primary w-100" onclick="adicionarProduto()">
+                                    <i class="bi bi-plus-circle"></i> <span data-translate="adicionar">Adicionar</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <ul class="list-group" id="listaProdutos">
+                                <!-- Produtos serão inseridos aqui -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Balanço -->
+    <div class="modal fade" id="balancoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" data-translate="balancoGeral">Balanço Geral</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title" data-translate="resumoGeral">Resumo Geral</h6>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item d-flex justify-content-between">
+                                            <span data-translate="totalVendas">Total de Vendas</span>
+                                            <span id="balancoTotalVendas">0</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between">
+                                            <span data-translate="custoTotal">Custo Total</span>
+                                            <span class="text-danger currency" id="balancoCustoTotal">0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between">
+                                            <span data-translate="vendaTotal">Venda Total</span>
+                                            <span class="text-primary currency" id="balancoVendaTotal">0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between">
+                                            <span data-translate="lucroTotal">Lucro Total</span>
+                                            <span class="text-success currency" id="balancoLucroTotal">0.00</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title" data-translate="statusPagamentos">Status dos Pagamentos</h6>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item d-flex justify-content-between">
+                                            <span data-translate="vendasPagas">Vendas Pagas</span>
+                                            <span id="balancoVendasPagas">0</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between">
+                                            <span data-translate="vendasPendentes">Vendas Pendentes</span>
+                                            <span id="balancoVendasPendentes">0</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between">
+                                            <span data-translate="valorPago">Valor Pago</span>
+                                            <span class="text-success currency" id="balancoValorPago">0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between">
+                                            <span data-translate="valorPendente">Valor Pendente</span>
+                                            <span class="text-warning currency" id="balancoValorPendente">0.00</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts do Bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Sistema de tradução
+        const traducoes = {
+            pt: {
+                titulo: "Gerenciador de Vendas de Assinaturas",
+                novaVenda: "Nova Venda",
+                produto: "Produto",
+                duracao: "Duração",
+                origem: "Origem do Produto",
+                nomeComprador: "Nome do Comprador",
+                email: "Email",
+                dataCompra: "Data da Compra",
+                dataVencimento: "Data de Vencimento",
+                precoCusto: "Preço de Custo",
+                precoVenda: "Preço de Venda",
+                lucro: "Lucro",
+                status: "Status",
+                pago: "Pago",
+                pendente: "Pendente",
+                anotacoes: "Anotações",
+                buscar: "Buscar",
+                exportar: "Exportar para Excel",
+                compartilhar: "Compartilhar",
+                selecioneProduto: "Selecione um produto",
+                digiteProduto: "Digite o nome do produto",
+                produtoObrigatorio: "Por favor, selecione um produto",
+                selecioneDuracao: "Selecione a duração",
+                umMes: "1 mês",
+                tresMeses: "3 meses",
+                seisMeses: "6 meses",
+                umAno: "1 ano",
+                doisAnos: "2 anos",
+                tresAnos: "3 anos",
+                paraSempre: "Para sempre",
+                personalizado: "Personalizado",
+                digiteMeses: "Digite o número de meses",
+                duracaoObrigatoria: "Por favor, selecione a duração",
+                origemObrigatoria: "Por favor, informe a origem do produto",
+                nomeObrigatorio: "Por favor, informe o nome do comprador",
+                emailInvalido: "Por favor, informe um email válido",
+                dataObrigatoria: "Por favor, selecione a data",
+                precoObrigatorio: "Por favor, informe o preço",
+                vendaSalva: "Venda salva com sucesso!",
+                erroSalvar: "Erro ao salvar venda",
+                confirmarExclusao: "Tem certeza que deseja excluir esta venda?",
+                vendaExcluida: "Venda excluída com sucesso!",
+                exportadoSucesso: "Arquivo exportado com sucesso!",
+                erroExportar: "Erro ao exportar arquivo",
+                carregando: "Carregando...",
+                processando: "Processando...",
+                confirmacao: "Confirmação",
+                cancelar: "Cancelar",
+                confirmar: "Confirmar",
+                atualizar: "Atualizar Venda",
+                detalhesVenda: "Detalhes da Venda",
+                todosCampos: "Todos os campos",
+                encontrados: "Encontrados",
+                total: "Total",
+                acoes: "Ações",
+                excluirSelecionados: "Excluir Selecionados",
+                limparBanco: "Limpar Banco de Dados",
+                debug: "Debug Info",
+                confirmarExclusaoMultipla: "Tem certeza que deseja excluir as vendas selecionadas?",
+                itensSelecionados: "itens selecionados",
+                vendasExcluidas: "Vendas excluídas com sucesso!",
+                configuracoes: "Configurações",
+                produtosPreDeterminados: "Produtos Pré-determinados",
+                adicionar: "Adicionar",
+                produtosPersonalizados: "Produtos Personalizados",
+                balanco: "Balanço",
+                balancoGeral: "Balanço Geral",
+                resumoGeral: "Resumo Geral",
+                totalVendas: "Total de Vendas",
+                custoTotal: "Custo Total",
+                vendaTotal: "Venda Total",
+                lucroTotal: "Lucro Total",
+                statusPagamentos: "Status dos Pagamentos",
+                vendasPagas: "Vendas Pagas",
+                vendasPendentes: "Vendas Pendentes",
+                valorPago: "Valor Pago",
+                valorPendente: "Valor Pendente",
+                telefoneInvalido: "Por favor, informe um telefone válido",
+                telefoneComprador: "Telefone do Comprador (opcional)",
+                verComprovante: "Ver",
+                origem_label: "Origem",
+                serial_label: "Serial",
+                naoDisponivel: "N/A"
+            },
+            he: {
+                titulo: "מנהל מכירות מנויים",
+                novaVenda: "מכירה חדשה",
+                produto: "מוצר",
+                duracao: "משך זמן",
+                origem: "מקור המוצר",
+                nomeComprador: "שם הקונה",
+                email: "אימייל",
+                emailComprador: "דוא״ל הקונה (אופציונלי)",
+                dataCompra: "תאריך קנייה",
+                dataVencimento: "תאריך תפוגה",
+                precoCusto: "מחיר עלות",
+                precoVenda: "מחיר מכירה",
+                lucro: "רווח",
+                status: "סטטוס",
+                statusPagamento: "סטטוס תשלום",
+                pago: "שולם",
+                pendente: "ממתין",
+                anotacoes: "הערות",
+                buscar: "חיפוש",
+                exportar: "ייצוא לאקסל",
+                compartilhar: "שיתוף",
+                selecioneProduto: "בחר מוצר",
+                digiteProduto: "הקלד את שם המוצר",
+                produtoObrigatorio: "אנא בחר מוצר",
+                selecioneDuracao: "בחר משך זמן",
+                umMes: "חודש אחד",
+                tresMeses: "3 חודשים",
+                seisMeses: "6 חודשים",
+                umAno: "שנה",
+                doisAnos: "שנתיים",
+                tresAnos: "3 שנים",
+                paraSempre: "לצמיתות",
+                personalizado: "מותאם אישית",
+                digiteMeses: "הקלד מספר חודשים",
+                duracaoObrigatoria: "אנא בחר משך זמן",
+                origemObrigatoria: "אנא הזן את מקור המוצר",
+                nomeObrigatorio: "אנא הזן את שם הקונה",
+                emailInvalido: "אנא הזן כתובת אימייל תקינה",
+                dataObrigatoria: "אנא בחר תאריך",
+                precoObrigatorio: "אנא הזן מחיר",
+                vendaSalva: "המכירה נשמרה בהצלחה!",
+                erroSalvar: "שגיאה בשמירת המכירה",
+                confirmarExclusao: "האם אתה בטוח שברצונך למחוק מכירה זו?",
+                vendaExcluida: "המכירה נמחקה בהצלחה!",
+                exportadoSucesso: "הקובץ יוצא בהצלחה!",
+                erroExportar: "שגיאה בייצוא הקובץ",
+                carregando: "טוען...",
+                processando: "מעבד...",
+                confirmacao: "אישור",
+                cancelar: "ביטל",
+                confirmar: "אישור",
+                atualizar: "עדכן מכירה",
+                detalhesVenda: "פרטי מכירה",
+                todosCampos: "כל השדות",
+                encontrados: "נמצאו",
+                total: "סה״כ",
+                acoes: "פעולות",
+                excluirSelecionados: "מחק נבחרים",
+                limparBanco: "נקה מסד נתונים",
+                debug: "מידע דיבאג",
+                confirmarExclusaoMultipla: "האם אתה בטוח שברצונך למחוק את המכירות שנבחרו?",
+                itensSelecionados: "פריטים נבחרו",
+                vendasExcluidas: "המכירות נמחקו בהצלחה!",
+                confirmarLimpar: "האם אתה בטוח שברצונך לנקות את כל מסד הנתונים?",
+                dadosLimpos: "מסד הנתונים נוקה בהצלחה!",
+                erroLimpar: "שגיאה בניקוי מסד הנתונים",
+                emailEnviado: "האימייל נשלח בהצלחה!",
+                erroEmail: "שגיאה בשליחת האימייל",
+                emailNaoEncontrado: "לא נמצאה כתובת אימייל",
+                comprovante: "קבלה",
+                arquivoGrande: "הקובץ גדול מדי או בפורמט לא תקין",
+                numeroSerial: "מספר סידורי/חשבון (אופציונלי)",
+                valor: "סכום",
+                data: "תאריך",
+                nome: "שם",
+                custo: "עלות (₪)",
+                venda: "מכירה (₪)",
+                resultadosBusca: "תוצאות חיפוש",
+                buscarPeriodo: "חיפוש לפי תקופה",
+                salvar: "שמור מכירה",
+                outro: "אחר...",
+                telefoneComprador: "טלפון הקונה (אופציונלי)",
+                telefoneInvalido: "אנא הזן מספר טלפון תקין",
+                verComprovante: "צפה",
+                origem_label: "מקור",
+                serial_label: "סידורי",
+                naoDisponivel: "לא זמין"
+            }
+        };
+
+        let idiomaAtual = 'pt';
+
+        // Definir alternarIdioma no escopo global
+        window.alternarIdioma = function() {
+            idiomaAtual = idiomaAtual === 'pt' ? 'he' : 'pt';
+            document.documentElement.setAttribute('dir', idiomaAtual === 'he' ? 'rtl' : 'ltr');
+            document.documentElement.setAttribute('lang', idiomaAtual);
+            traduzirInterface();
+        };
+
+        // Definir traduzirInterface no escopo global
+        window.traduzirInterface = function() {
+            document.querySelectorAll('[data-translate]').forEach(elemento => {
+                const chave = elemento.getAttribute('data-translate');
+                if (traducoes[idiomaAtual][chave]) {
+                    elemento.textContent = traducoes[idiomaAtual][chave];
+                }
+            });
+
+            document.querySelectorAll('[data-translate-placeholder]').forEach(elemento => {
+                const chave = elemento.getAttribute('data-translate-placeholder');
+                if (traducoes[idiomaAtual][chave]) {
+                    elemento.placeholder = traducoes[idiomaAtual][chave];
+                }
+            });
+        };
+
+        // Duração padrão por produto
+        const duracoesPadrao = {
+            'Netflix': '1',
+            'Disney+': '1',
+            'HBO Max': '1',
+            'Amazon Prime': '1',
+            'Spotify': '1',
+            'YouTube Premium': '1',
+            'Deezer': '1',
+            'Apple TV+': '1',
+            'Paramount+': '1',
+            'Star+': '1',
+            'Discovery+': '1',
+            'NordVPN': '12',
+            'ExpressVPN': '12',
+            'CyberGhost': '12'
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Log inicial para debug
+            console.log('Aplicação iniciada');
+            console.log('Estado inicial do localStorage:', localStorage.getItem('vendas'));
+        });
+
+        // Elementos do DOM
+        const vendaForm = document.getElementById('vendaForm');
+        const todasVendas = document.getElementById('todasVendas');
+        const buscador = document.getElementById('buscador');
+        const tipoBusca = document.getElementById('tipoBusca');
+        const buscaPeriodo = document.getElementById('buscaPeriodo');
+        const sugestoesList = document.getElementById('sugestoes-busca');
+        const btnBuscar = document.getElementById('btnBuscar');
+        const btnExportar = document.getElementById('btnExportar');
+        const resultadosBuscaContainer = document.getElementById('resultadosBuscaContainer');
+        const numResultados = document.getElementById('numResultados');
+        const debugInfo = document.getElementById('debugInfo');
+        const selecionarTodos = document.getElementById('selecionarTodos');
+        const selecionarTodosResultados = document.getElementById('selecionarTodosResultados');
+        const btnExcluirSelecionados = document.getElementById('excluirSelecionados');
+        const numSelecionados = document.getElementById('numSelecionados');
+        const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+        const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        const compartilharModal = new bootstrap.Modal(document.getElementById('compartilharModal'));
+        const templateGrupoMes = document.getElementById('templateGrupoMes');
+
+        // Event listeners para cálculo automático
+        document.getElementById('dataCompra').addEventListener('change', calcularDataVencimento);
+        document.getElementById('duracaoProduto').addEventListener('change', function() {
+            const duracaoPersonalizada = document.getElementById('duracaoPersonalizada');
+            duracaoPersonalizada.style.display = this.value === 'custom' ? 'block' : 'none';
+            calcularDataVencimento();
+        });
+        document.getElementById('duracaoPersonalizada').addEventListener('input', calcularDataVencimento);
+        document.getElementById('precoVenda').addEventListener('input', calcularLucro);
+        document.getElementById('precoCusto').addEventListener('input', calcularLucro);
+
+        // Função para calcular data de vencimento
+        function calcularDataVencimento() {
+            const dataCompra = document.getElementById('dataCompra').value;
+            const duracaoProduto = document.getElementById('duracaoProduto').value;
+            const duracaoPersonalizada = document.getElementById('duracaoPersonalizada');
+            const dataVencimento = document.getElementById('dataVencimento');
+            
+            if (!dataCompra || !duracaoProduto) {
+                dataVencimento.value = '';
+                return;
+            }
+
+            try {
+                // Criar uma nova data a partir da data de compra
+                const dataInicial = new Date(dataCompra);
+                const dataFinal = new Date(dataInicial);
+                
+                // Ajustar para meio-dia para evitar problemas com horário de verão
+                dataFinal.setHours(12, 0, 0, 0);
+                
+                if (duracaoProduto === 'forever') {
+                    dataFinal.setFullYear(2099, 11, 31); // 31/12/2099
+                } else if (duracaoProduto === 'custom') {
+                    const meses = parseInt(duracaoPersonalizada.value) || 1;
+                    // Pegar o dia do mês atual
+                    const diaAtual = dataFinal.getDate();
+                    // Adicionar os meses
+                    dataFinal.setMonth(dataFinal.getMonth() + meses);
+                    // Se o dia mudou, voltar para o último dia do mês anterior
+                    if (dataFinal.getDate() !== diaAtual) {
+                        dataFinal.setDate(0);
+                    }
+                } else {
+                    const meses = parseInt(duracaoProduto);
+                    // Pegar o dia do mês atual
+                    const diaAtual = dataFinal.getDate();
+                    // Adicionar os meses
+                    dataFinal.setMonth(dataFinal.getMonth() + meses);
+                    // Se o dia mudou, voltar para o último dia do mês anterior
+                    if (dataFinal.getDate() !== diaAtual) {
+                        dataFinal.setDate(0);
+                    }
+                }
+
+                // Formatar a data para YYYY-MM-DD
+                const ano = dataFinal.getFullYear();
+                const mes = String(dataFinal.getMonth() + 1).padStart(2, '0');
+                const dia = String(dataFinal.getDate()).padStart(2, '0');
+                dataVencimento.value = `${ano}-${mes}-${dia}`;
+                
+                console.log('Data de compra:', dataCompra);
+                console.log('Duração:', duracaoProduto);
+                console.log('Data de vencimento calculada:', dataVencimento.value);
+            } catch (error) {
+                console.error('Erro ao calcular data de vencimento:', error);
+                dataVencimento.value = '';
+            }
+        }
+
+        // Função para calcular lucro
+        function calcularLucro() {
+            const venda = parseFloat(document.getElementById('precoVenda').value) || 0;
+            const custo = parseFloat(document.getElementById('precoCusto').value) || 0;
+            document.getElementById('lucro').value = (venda - custo).toFixed(2);
+        }
+
+        // Função para validar formulário
+        function validarFormulario() {
+            const camposObrigatorios = [
+                { id: 'nomeProduto', mensagem: traducoes[idiomaAtual].produtoObrigatorio },
+                { id: 'duracaoProduto', mensagem: traducoes[idiomaAtual].duracaoObrigatoria },
+                { id: 'origemProduto', mensagem: traducoes[idiomaAtual].origemObrigatoria },
+                { id: 'nomeComprador', mensagem: traducoes[idiomaAtual].nomeObrigatorio },
+                { id: 'dataCompra', mensagem: traducoes[idiomaAtual].dataObrigatoria },
+                { id: 'dataVencimento', mensagem: traducoes[idiomaAtual].dataObrigatoria },
+                { id: 'precoVenda', mensagem: traducoes[idiomaAtual].precoObrigatorio }
+            ];
+
+            for (const campo of camposObrigatorios) {
+                const elemento = document.getElementById(campo.id);
+                if (!elemento.value) {
+                    mostrarFeedback('error', campo.mensagem);
+                    elemento.focus();
+                    return false;
+                }
+            }
+
+            // Validar email se fornecido
+            const email = document.getElementById('emailComprador').value;
+            if (email && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                mostrarFeedback('error', traducoes[idiomaAtual].emailInvalido);
+                document.getElementById('emailComprador').focus();
+                return false;
+            }
+
+            return true;
+        }
+
+        // Função para mostrar feedback
+        function mostrarFeedback(tipo, mensagem) {
+            const feedback = document.querySelector(`.${tipo}-feedback`);
+            if (feedback) {
+                feedback.style.display = 'inline';
+                feedback.querySelector('span').textContent = mensagem;
+                setTimeout(() => feedback.style.display = 'none', 3000);
+            }
+        }
+
+        // Função para verificar se o localStorage está disponível
+        function verificarLocalStorage() {
+            try {
+                const test = 'test';
+                localStorage.setItem(test, test);
+                localStorage.removeItem(test);
+                return true;
+            } catch(e) {
+                console.error('localStorage não está disponível:', e);
+                return false;
+            }
+        }
+
+        // Array global para armazenar vendas
+        let vendas = [];
+
+        // Função para carregar vendas do localStorage
+        function carregarVendas() {
+            try {
+                const dadosString = localStorage.getItem('vendas');
+                if (dadosString) {
+                    vendas = JSON.parse(dadosString);
+                    console.log('Vendas carregadas:', vendas.length);
+                } else {
+                    console.log('Nenhuma venda encontrada no localStorage');
+                    vendas = [];
+                }
+                updateDebugInfo();
+            } catch (error) {
+                console.error('Erro ao carregar vendas:', error);
+                vendas = [];
+                localStorage.removeItem('vendas');
+                alert('Erro ao carregar banco de dados. Os dados foram resetados.');
+            }
+        }
+
+        // Função para salvar vendas no localStorage
+        function salvarVendas() {
+            if (!verificarLocalStorage()) {
+                mostrarFeedback('error', 'Erro: Não é possível salvar no banco de dados local');
+                return false;
+            }
+
+            try {
+                if (!Array.isArray(vendas)) {
+                    console.error('Vendas não é um array:', vendas);
+                    throw new Error('Dados inválidos');
+                }
+
+                const dadosString = JSON.stringify(vendas);
+                if (!dadosString) {
+                    throw new Error('Erro ao converter dados para JSON');
+                }
+
+                localStorage.setItem('vendas', dadosString);
+
+                const dadosSalvos = localStorage.getItem('vendas');
+                if (dadosSalvos !== dadosString) {
+                    throw new Error('Erro na verificação dos dados salvos');
+                }
+
+                console.log('Vendas salvas com sucesso:', {
+                    quantidade: vendas.length,
+                    tamanho: new Blob([dadosString]).size / 1024 + 'KB'
+                });
+
+                updateDebugInfo();
+                return true;
+            } catch (error) {
+                console.error('Erro ao salvar vendas:', error);
+                mostrarFeedback('error', 'Erro ao salvar no banco de dados local');
+                return false;
+            }
+        }
+
+        // Event listener para o formulário
+        vendaForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!validarFormulario()) return;
+
+            try {
+                loadingModal.show();
+                
+                const venda = {
+                    id: Date.now(),
+                    produto: nomeProduto.value === 'Outro' ? outroNomeProduto.value : nomeProduto.value,
+                    origemProduto: document.getElementById('origemProduto').value,
+                    numeroSerial: document.getElementById('numeroSerial').value,
+                    nomeComprador: document.getElementById('nomeComprador').value,
+                    email: document.getElementById('emailComprador').value,
+                    telefoneComprador: document.getElementById('telefoneComprador').value,
+                    dataCompra: document.getElementById('dataCompra').value,
+                    dataVencimento: document.getElementById('dataVencimento').value,
+                    precoCusto: document.getElementById('precoCusto').value || '0',
+                    precoVenda: document.getElementById('precoVenda').value,
+                    lucro: document.getElementById('lucro').value,
+                    statusPagamento: document.getElementById('statusPagamento').value,
+                    anotacoes: document.getElementById('anotacoes').value,
+                    dataCriacao: new Date().toISOString()
+                };
+
+                const comprovanteInput = document.getElementById('comprovante');
+                if (comprovanteInput.files.length > 0) {
+                    const comprovante = await toBase64(comprovanteInput.files[0]);
+                    venda.comprovante = await comprimirImagem(comprovante);
+                }
+
+                vendas.push(venda);
+                
+                if (salvarVendas()) {
+                    mostrarFeedback('success', traducoes[idiomaAtual].vendaSalva);
+                    
+                    // Enviar email usando o mesmo método que funciona no botão
+                    const templateParams = {
+                        to_email: 'davidmeirshrem@gmail.com',
+                        to_name: String(venda.nomeComprador || ''),
+                        from_name: 'Sistema de Vendas',
+                        subject: 'Nova Venda Registrada',
+                        message: `
+                            Nova venda registrada com sucesso!
+
+                            Produto: ${venda.produto}
+                            Origem: ${venda.origemProduto || 'N/A'}
+                            Serial: ${venda.numeroSerial || 'N/A'}
+                            Data da Compra: ${new Date(venda.dataCompra).toLocaleDateString()}
+                            Data de Vencimento: ${new Date(venda.dataVencimento).toLocaleDateString()}
+                            Valor: ₪${venda.precoVenda}
+                            Status: ${venda.statusPagamento}
+                            Observações: ${venda.anotacoes || 'N/A'}
+                        `.trim()
+                    };
+
+                    try {
+                        const response = await emailjs.send(
+                            'service_lb5yt39',
+                            'template_o0acrgq',
+                            templateParams,
+                            'hOEhCYJwa_99mn944'
+                        );
+                        console.log('Email enviado:', response);
+                    } catch (emailError) {
+                        console.error('Erro ao enviar email:', emailError);
+                    }
+
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }
+            } catch (error) {
+                console.error('Erro ao salvar venda:', error);
+                mostrarFeedback('error', traducoes[idiomaAtual].erroSalvar);
+            } finally {
+                loadingModal.hide();
+            }
+        });
+
+        // Funções auxiliares para processamento de imagem
+        function toBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        async function comprimirImagem(base64Str) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.src = base64Str;
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    let width = img.width;
+                    let height = img.height;
+                    const maxSize = 800;
+                    
+                    if (width > height && width > maxSize) {
+                        height = height * (maxSize / width);
+                        width = maxSize;
+                    } else if (height > maxSize) {
+                        width = width * (maxSize / height);
+                        height = maxSize;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                };
+            });
+        }
+
+        // Função para atualizar tabela
+        function atualizarTabela() {
+            todasVendas.innerHTML = '';
+            if (!vendas.length) return;
+
+            // Agrupar vendas por mês
+            const vendasPorMes = {};
+            vendas.sort((a, b) => new Date(b.dataCompra) - new Date(a.dataCompra))
+                  .forEach(venda => {
+                      const mesAno = venda.dataCompra.substring(0, 7); // YYYY-MM
+                      if (!vendasPorMes[mesAno]) vendasPorMes[mesAno] = [];
+                      vendasPorMes[mesAno].push(venda);
+                  });
+
+            // Criar grupos de mês
+            Object.entries(vendasPorMes).forEach(([mesAno, vendasDoMes]) => {
+                const clone = templateGrupoMes.content.cloneNode(true);
+                const mesAnoElement = clone.querySelector('.mes-ano');
+                const totalMes = clone.querySelector('.total-mes');
+                const tbody = clone.querySelector('.vendas-mes');
+
+                // Formatar mês/ano
+                const [ano, mes] = mesAno.split('-');
+                const data = new Date(ano, mes - 1);
+                mesAnoElement.textContent = data.toLocaleDateString(idiomaAtual === 'he' ? 'he-IL' : 'pt-BR', {
+                    month: 'long',
+                    year: 'numeric'
+                });
+
+                // Calcular total do mês
+                const total = vendasDoMes.reduce((acc, venda) => acc + parseFloat(venda.lucro), 0);
+                totalMes.textContent = total.toFixed(2);
+
+                // Adicionar vendas
+                vendasDoMes.forEach(venda => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = gerarLinhaTabela(venda);
+                    tbody.appendChild(tr);
+                });
+
+                todasVendas.appendChild(clone);
+            });
+
+            updateDebugInfo();
+            traduzirInterface(); // Adicione esta linha
+        }
+
+        // Função para gerar linha da tabela
+        function gerarLinhaTabela(venda) {
+            return `
+                <td>
+                    <input type="checkbox" class="form-check-input selecao-venda" data-id="${venda.id}">
+                </td>
+                <td>
+                    ${venda.produto}
+                    ${venda.origemProduto ? `<br><small class="text-muted"><strong data-translate="origem_label">${traducoes[idiomaAtual].origem_label}</strong>: ${venda.origemProduto}</small>` : ''}
+                    ${venda.numeroSerial ? `<br><small class="text-muted"><strong data-translate="serial_label">${traducoes[idiomaAtual].serial_label}</strong>: ${venda.numeroSerial}</small>` : ''}
+                </td>
+                <td>
+                    ${venda.nomeComprador}
+                    ${venda.email ? `<br><small class="text-muted"><i class="bi bi-envelope"></i> ${venda.email}</small>` : ''}
+                    ${venda.telefoneComprador ? `<br><small class="text-muted"><i class="bi bi-telephone"></i> ${venda.telefoneComprador}</small>` : ''}
+                </td>
+                <td>${new Date(venda.dataCompra).toLocaleDateString()}</td>
+                <td>${new Date(venda.dataVencimento).toLocaleDateString()}</td>
+                <td>
+                    ${venda.comprovante ? 
+                        `<button class="btn btn-info btn-sm" onclick="visualizarComprovante('${venda.id}')">
+                            <i class="bi bi-image"></i> <span data-translate="verComprovante">${traducoes[idiomaAtual].verComprovante}</span>
+                        </button>` : 
+                        `<span data-translate="naoDisponivel">${traducoes[idiomaAtual].naoDisponivel}</span>`}
+                </td>
+                <td class="valor-custo currency">${venda.precoCusto ? parseFloat(venda.precoCusto).toFixed(2) : '0.00'}</td>
+                <td class="valor-venda currency">${parseFloat(venda.precoVenda).toFixed(2)}</td>
+                <td class="valor-lucro currency">${parseFloat(venda.lucro).toFixed(2)}</td>
+                <td>
+                    <span class="badge ${venda.statusPagamento === 'pago' ? 'bg-success' : 'bg-warning'}" data-translate="${venda.statusPagamento === 'pago' ? 'pago' : 'pendente'}">
+                        ${venda.statusPagamento === 'pago' ? traducoes[idiomaAtual].pago : traducoes[idiomaAtual].pendente}
+                    </span>
+                    ${venda.anotacoes ? 
+                        `<br><small class="text-muted anotacao-preview">
+                            <i class="bi bi-sticky"></i> ${venda.anotacoes}
+                        </small>` : 
+                        ''}
+                </td>
+                <td>
+                    <div class="btn-group">
+                        <button class="btn btn-primary btn-sm" onclick="editarVenda(${venda.id})">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="excluirVenda(${venda.id})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        <button class="btn btn-success btn-sm" onclick="enviarEmail(${venda.id})">
+                            <i class="bi bi-envelope"></i>
+                        </button>
+                        <button class="btn btn-info btn-sm" onclick="abrirCompartilhar(${venda.id})">
+                            <i class="bi bi-share"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+        }
+
+        // Funções de manipulação de vendas
+        function editarVenda(id) {
+            const venda = vendas.find(v => v.id === id);
+            if (!venda) return;
+
+            // Preencher formulário
+            document.getElementById('nomeProduto').value = venda.produto;
+            document.getElementById('origemProduto').value = venda.origemProduto;
+            document.getElementById('numeroSerial').value = venda.numeroSerial || '';
+            document.getElementById('nomeComprador').value = venda.nomeComprador;
+            document.getElementById('emailComprador').value = venda.email || '';
+            document.getElementById('telefoneComprador').value = venda.telefoneComprador || '';
+            document.getElementById('dataCompra').value = venda.dataCompra;
+            document.getElementById('dataVencimento').value = venda.dataVencimento;
+            document.getElementById('precoCusto').value = venda.precoCusto || '';
+            document.getElementById('precoVenda').value = venda.precoVenda;
+            document.getElementById('lucro').value = venda.lucro;
+            document.getElementById('statusPagamento').value = venda.statusPagamento;
+            document.getElementById('anotacoes').value = venda.anotacoes || '';
+
+            // Remover venda atual
+            vendas = vendas.filter(v => v.id !== id);
+            
+            // Rolar até o formulário
+            vendaForm.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function excluirVenda(id) {
+            const venda = vendas.find(v => v.id === id);
+            if (!venda) return;
+
+            document.getElementById('confirmMessage').textContent = 
+                `${traducoes[idiomaAtual].confirmarExclusao}\n${venda.produto} - ${venda.nomeComprador}`;
+            
+            document.getElementById('confirmAction').onclick = async function() {
+                try {
+                    loadingModal.show();
+                    vendas = vendas.filter(v => v.id !== id);
+                    
+                    if (salvarVendas()) {
+                        mostrarFeedback('success', traducoes[idiomaAtual].vendaExcluida);
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    }
+                } catch (error) {
+                    console.error('Erro ao excluir venda:', error);
+                    mostrarFeedback('error', traducoes[idiomaAtual].erroExcluir);
+                } finally {
+                    confirmModal.hide();
+                    loadingModal.hide();
+                }
+            };
+            
+            confirmModal.show();
+        }
+
+        // Funções de compartilhamento
+        function abrirCompartilhar(id) {
+            const venda = vendas.find(v => v.id === id);
+            if (!venda) return;
+
+            const compartilharBtns = document.querySelector('.compartilhar-btns');
+            compartilharBtns.dataset.vendaId = id;
+            compartilharModal.show();
+        }
+
+        function compartilharVenda(tipo) {
+            const id = parseInt(document.querySelector('.compartilhar-btns').dataset.vendaId);
+            const venda = vendas.find(v => v.id === id);
+            if (!venda) return;
+
+            const texto = `
+                ${traducoes[idiomaAtual].produto}: ${venda.produto}
+                ${traducoes[idiomaAtual].valor}: ₪${venda.precoVenda}
+                ${traducoes[idiomaAtual].data}: ${new Date(venda.dataCompra).toLocaleDateString()}
+                ${venda.numeroSerial ? `\n${traducoes[idiomaAtual].numeroSerial}: ${venda.numeroSerial}` : ''}
+                ${venda.anotacoes ? `\n${traducoes[idiomaAtual].anotacoes}: ${venda.anotacoes}` : ''}
+            `.trim();
+
+            if (tipo === 'whatsapp') {
+                window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`);
+            } else if (tipo === 'email') {
+                window.open(`mailto:?subject=${encodeURIComponent(traducoes[idiomaAtual].detalhesVenda)}&body=${encodeURIComponent(texto)}`);
+            }
+
+            compartilharModal.hide();
+        }
+
+        // Função para visualizar comprovante (tornar global)
+        window.visualizarComprovante = function(id) {
+            const venda = vendas.find(v => v.id === parseInt(id));
+            if (!venda || !venda.comprovante) return;
+
+            const img = document.getElementById('comprovanteImg');
+            img.src = venda.comprovante;
+            new bootstrap.Modal(document.getElementById('comprovanteModal')).show();
+        };
+
+        // Função para enviar email
+        async function enviarEmail(id) {
+            const venda = vendas.find(v => v.id === id);
+            if (!venda) {
+                console.error('Venda não encontrada:', id);
+                mostrarFeedback('error', traducoes[idiomaAtual].erroEmail);
+                return;
+            }
+
+            try {
+                loadingModal.show();
+                console.log('Preparando envio de email para venda:', venda);
+                
+                // Simplificar os parâmetros e garantir que são strings
+                const templateParams = {
+                    to_email: 'davidmeirshrem@gmail.com', // Email fixo para teste
+                    to_name: String(venda.nomeComprador || ''),
+                    from_name: 'Sistema de Vendas', // Nome do remetente
+                    subject: 'Detalhes da Venda', // Assunto do email
+                    message: `
+                        Produto: ${venda.produto}
+                        Origem: ${venda.origemProduto || 'N/A'}
+                        Serial: ${venda.numeroSerial || 'N/A'}
+                        Data da Compra: ${new Date(venda.dataCompra).toLocaleDateString()}
+                        Data de Vencimento: ${new Date(venda.dataVencimento).toLocaleDateString()}
+                        Valor: ₪${venda.precoVenda}
+                        Status: ${venda.statusPagamento}
+                        Observações: ${venda.anotacoes || 'N/A'}
+                    `.trim()
+                };
+
+                console.log('Parâmetros do template:', templateParams);
+
+                const response = await emailjs.send(
+                    'service_lb5yt39',
+                    'template_o0acrgq',
+                    templateParams,
+                    'hOEhCYJwa_99mn944' // Adicionar a public key aqui também
+                );
+                
+                console.log('Resposta do EmailJS:', response);
+                mostrarFeedback('success', traducoes[idiomaAtual].emailEnviado);
+
+            } catch (error) {
+                console.error('Erro detalhado ao enviar email:', error);
+                mostrarFeedback('error', `${traducoes[idiomaAtual].erroEmail}: ${error.message}`);
+            } finally {
+                loadingModal.hide();
+            }
+        }
+
+        // Função para atualizar debug info
+        function updateDebugInfo() {
+            if (!debugInfo) return;
+            
+            const info = {
+                totalVendas: vendas.length,
+                tamanhoStorage: new Blob([JSON.stringify(vendas)]).size / 1024,
+                ultimaAtualizacao: new Date().toLocaleString()
+            };
+            
+            debugInfo.innerHTML = `
+                <div>Total de Vendas: ${info.totalVendas}</div>
+                <div>Tamanho do Storage: ${info.tamanhoStorage.toFixed(2)}KB</div>
+                <div>Última Atualização: ${info.ultimaAtualizacao}</div>
+            `;
+        }
+
+        // Função para toggle debug info
+        function toggleDebug() {
+            debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+            updateDebugInfo();
+        }
+
+        // Função para buscar vendas
+        function realizarBusca() {
+            const termo = buscador.value.toLowerCase();
+            const tipo = tipoBusca.value;
+            const periodo = buscaPeriodo.value;
+            
+            const vendasFiltradas = vendas.filter(venda => {
+                if (!venda) return false;
+
+                // Filtrar por período se selecionado
+                if (periodo) {
+                    const dataVenda = venda.dataCompra.substring(0, 7); // YYYY-MM
+                    if (dataVenda !== periodo) return false;
+                }
+                
+                try {
+                    switch(tipo) {
+                        case 'produto':
+                            return venda.produto.toLowerCase().includes(termo);
+                        case 'origem':
+                            return venda.origemProduto.toLowerCase().includes(termo);
+                        case 'serial':
+                            return venda.numeroSerial?.toLowerCase().includes(termo);
+                        case 'nome':
+                            return venda.nomeComprador.toLowerCase().includes(termo);
+                        case 'email':
+                            return venda.email?.toLowerCase().includes(termo);
+                        case 'data':
+                            const dataCompra = new Date(venda.dataCompra).toLocaleDateString().toLowerCase();
+                            const dataVencimento = new Date(venda.dataVencimento).toLocaleDateString().toLowerCase();
+                            return dataCompra.includes(termo) || dataVencimento.includes(termo);
+                        case 'valor':
+                            const custoStr = venda.precoCusto?.toString() || '';
+                            const vendaStr = venda.precoVenda.toString();
+                            const lucroStr = venda.lucro.toString();
+                            return custoStr.includes(termo) || 
+                                   vendaStr.includes(termo) || 
+                                   lucroStr.includes(termo);
+                        case 'status':
+                            return venda.statusPagamento.toLowerCase().includes(termo);
+                        case 'anotacoes':
+                            return (venda.anotacoes || '').toLowerCase().includes(termo);
+                        default:
+                            return (
+                                venda.produto.toLowerCase().includes(termo) ||
+                                venda.origemProduto.toLowerCase().includes(termo) ||
+                                (venda.numeroSerial || '').toLowerCase().includes(termo) ||
+                                venda.nomeComprador.toLowerCase().includes(termo) ||
+                                (venda.email || '').toLowerCase().includes(termo) ||
+                                new Date(venda.dataCompra).toLocaleDateString().toLowerCase().includes(termo) ||
+                                new Date(venda.dataVencimento).toLocaleDateString().toLowerCase().includes(termo) ||
+                                (venda.precoCusto || '').toString().includes(termo) ||
+                                venda.precoVenda.toString().includes(termo) ||
+                                venda.lucro.toString().includes(termo) ||
+                                venda.statusPagamento.toLowerCase().includes(termo) ||
+                                (venda.anotacoes || '').toLowerCase().includes(termo)
+                            );
+                    }
+                } catch (error) {
+                    console.error('Erro ao filtrar venda:', error, venda);
+                    return false;
+                }
+            });
+            
+            numResultados.textContent = vendasFiltradas.length;
+            resultadosBuscaContainer.style.display = 'block';
+            
+            const tabelaResultados = document.getElementById('resultadosBusca');
+            tabelaResultados.innerHTML = '';
+            
+            vendasFiltradas.forEach(venda => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = gerarLinhaTabela(venda);
+                tabelaResultados.appendChild(tr);
+            });
+        }
+
+        // Função para exportar para Excel
+        btnExportar.addEventListener('click', function() {
+            try {
+                loadingModal.show();
+
+                const headers = [
+                    traducoes[idiomaAtual].produto || 'Produto',
+                    traducoes[idiomaAtual].origem || 'Origem',
+                    traducoes[idiomaAtual].numeroSerial || 'Serial/Conta',
+                    traducoes[idiomaAtual].nomeComprador || 'Nome Comprador',
+                    traducoes[idiomaAtual].email || 'Email',
+                    traducoes[idiomaAtual].telefone || 'Telefone',
+                    traducoes[idiomaAtual].dataCompra || 'Data Compra',
+                    traducoes[idiomaAtual].dataVencimento || 'Vencimento',
+                    traducoes[idiomaAtual].precoCusto || 'Custo (₪)',
+                    traducoes[idiomaAtual].precoVenda || 'Venda (₪)',
+                    traducoes[idiomaAtual].lucro || 'Lucro (₪)',
+                    traducoes[idiomaAtual].status || 'Status',
+                    traducoes[idiomaAtual].anotacoes || 'Anotações'
+                ];
+
+                const dados = vendas.map(venda => [
+                    venda.produto,
+                    venda.origemProduto,
+                    venda.numeroSerial || '',
+                    venda.nomeComprador,
+                    venda.email || '',
+                    venda.telefone || '',
+                    new Date(venda.dataCompra).toLocaleDateString(),
+                    new Date(venda.dataVencimento).toLocaleDateString(),
+                    venda.precoCusto || '0.00',
+                    venda.precoVenda,
+                    venda.lucro,
+                    venda.statusPagamento,
+                    venda.anotacoes || ''
+                ]);
+
+                const csvContent = [headers, ...dados]
+                    .map(row => row.map(cell => `"${cell}"`).join(','))
+                    .join('\n');
+
+                const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', `vendas_${new Date().toLocaleDateString()}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                mostrarFeedback('success', traducoes[idiomaAtual].exportadoSucesso || 'Arquivo exportado com sucesso!');
+                
+                // Adicionar reload após exportar
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+
+            } catch (error) {
+                console.error('Erro ao exportar:', error);
+                mostrarFeedback('error', traducoes[idiomaAtual].erroExportar || 'Erro ao exportar arquivo');
+            } finally {
+                loadingModal.hide();
+            }
+        });
+
+        // Função para limpar banco de dados
+        window.limparBancoDados = function() {
+            document.getElementById('confirmMessage').textContent = traducoes[idiomaAtual].confirmarLimpar;
+            document.getElementById('confirmAction').onclick = function() {
+                try {
+                    localStorage.removeItem('vendas');
+                    vendas = [];
+                    atualizarTabela();
+                    mostrarFeedback('success', traducoes[idiomaAtual].dadosLimpos);
+                } catch (error) {
+                    console.error('Erro ao limpar dados:', error);
+                    mostrarFeedback('error', traducoes[idiomaAtual].erroLimpar);
+                } finally {
+                    confirmModal.hide();
+                }
+            };
+            confirmModal.show();
+        };
+
+        // Funções para manipulação de seleção múltipla
+        function atualizarBotaoExcluirSelecionados() {
+            const selecionados = document.querySelectorAll('.selecao-venda:checked').length;
+            const btnExcluirSelecionados = document.getElementById('excluirSelecionados');
+            const numSelecionados = document.getElementById('numSelecionados');
+            
+            if (selecionados > 0) {
+                btnExcluirSelecionados.style.display = 'inline-block';
+                numSelecionados.textContent = selecionados;
+            } else {
+                btnExcluirSelecionados.style.display = 'none';
+            }
+        }
+
+        // Event listener para checkbox de seleção
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('selecao-venda')) {
+                atualizarBotaoExcluirSelecionados();
+            }
+        });
+
+        // Event listener para selecionar todos
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('selecionar-mes')) {
+                const tbody = e.target.closest('table').querySelector('tbody');
+                const checkboxes = tbody.querySelectorAll('.selecao-venda');
+                checkboxes.forEach(checkbox => checkbox.checked = e.target.checked);
+                atualizarBotaoExcluirSelecionados();
+            }
+        });
+
+        // Função para excluir vendas selecionadas
+        document.getElementById('excluirSelecionados').addEventListener('click', function() {
+            const selecionados = document.querySelectorAll('.selecao-venda:checked');
+            if (!selecionados.length) return;
+
+            document.getElementById('confirmMessage').textContent = 
+                `${traducoes[idiomaAtual].confirmarExclusaoMultipla}\n${selecionados.length} ${traducoes[idiomaAtual].itensSelecionados}`;
+            
+            document.getElementById('confirmAction').onclick = async function() {
+                try {
+                    loadingModal.show();
+                    
+                    const ids = Array.from(selecionados).map(checkbox => 
+                        parseInt(checkbox.getAttribute('data-id'))
+                    );
+                    
+                    vendas = vendas.filter(venda => !ids.includes(venda.id));
+                    
+                    if (salvarVendas()) {
+                        mostrarFeedback('success', traducoes[idiomaAtual].vendasExcluidas);
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    }
+                } catch (error) {
+                    console.error('Erro ao excluir vendas:', error);
+                    mostrarFeedback('error', traducoes[idiomaAtual].erroExcluir);
+                } finally {
+                    confirmModal.hide();
+                    loadingModal.hide();
+                }
+            };
+            
+            confirmModal.show();
+        });
+
+        // Event listeners finais
+        btnBuscar.addEventListener('click', realizarBusca);
+        buscador.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') realizarBusca();
+        });
+        buscaPeriodo.addEventListener('change', realizarBusca);
+        tipoBusca.addEventListener('change', realizarBusca);
+
+        // Inicializar
+        console.log('Inicializando aplicação...');
+        carregarVendas();
+        atualizarTabela();
+        traduzirInterface();
+        console.log('Inicialização concluída');
+
+        // Adicione estas funções antes dos event listeners finais
+        const configModal = new bootstrap.Modal(document.getElementById('configModal'));
+
+        // Função para abrir configurações
+        function abrirConfiguracoes() {
+            carregarProdutos();
+            configModal.show();
+        }
+
+        // Função para carregar produtos
+        function carregarProdutos() {
+            const listaProdutos = document.getElementById('listaProdutos');
+            listaProdutos.innerHTML = '';
+            
+            const produtos = JSON.parse(localStorage.getItem('produtos') || '[]');
+            
+            produtos.forEach(produto => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                li.innerHTML = `
+                    ${produto}
+                    <button class="btn btn-danger btn-sm" onclick="removerProduto('${produto}')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                `;
+                listaProdutos.appendChild(li);
+            });
+        }
+
+        // Função para adicionar produto
+        function adicionarProduto() {
+            const novoProduto = document.getElementById('novoProduto');
+            const produto = novoProduto.value.trim();
+            
+            if (!produto) return;
+            
+            const produtos = JSON.parse(localStorage.getItem('produtos') || '[]');
+            if (!produtos.includes(produto)) {
+                produtos.push(produto);
+                localStorage.setItem('produtos', JSON.stringify(produtos));
+                carregarProdutos();
+                atualizarSelectProdutos();
+            }
+            
+            novoProduto.value = '';
+        }
+
+        // Função para remover produto
+        function removerProduto(produto) {
+            let produtos = JSON.parse(localStorage.getItem('produtos') || '[]');
+            produtos = produtos.filter(p => p !== produto);
+            localStorage.setItem('produtos', JSON.stringify(produtos));
+            carregarProdutos();
+            atualizarSelectProdutos();
+        }
+
+        // Função para atualizar select de produtos
+        function atualizarSelectProdutos() {
+            const select = document.getElementById('nomeProduto');
+            const produtosPersonalizados = JSON.parse(localStorage.getItem('produtos') || '[]');
+            
+            // Manter as opções padrão até o último optgroup
+            const optgroups = select.getElementsByTagName('optgroup');
+            const ultimoOptgroup = optgroups[optgroups.length - 1];
+            const indexUltimoOptgroup = Array.from(select.children).indexOf(ultimoOptgroup);
+            
+            // Remover opções personalizadas antigas
+            while (select.children.length > indexUltimoOptgroup + 2) {
+                select.removeChild(select.lastChild);
+            }
+            
+            // Adicionar novo optgroup para produtos personalizados
+            if (produtosPersonalizados.length > 0) {
+                const grupo = document.createElement('optgroup');
+                grupo.label = traducoes[idiomaAtual].produtosPersonalizados || 'Produtos Personalizados';
+                
+                produtosPersonalizados.forEach(produto => {
+                    const option = document.createElement('option');
+                    option.value = produto;
+                    option.textContent = produto;
+                    grupo.appendChild(option);
+                });
+                
+                select.insertBefore(grupo, select.lastChild);
+            }
+        }
+
+        // Adicionar ao objeto de traduções
+        traducoes.pt.configuracoes = "Configurações";
+        traducoes.pt.produtosPreDeterminados = "Produtos Pré-determinados";
+        traducoes.pt.adicionar = "Adicionar";
+        traducoes.pt.produtosPersonalizados = "Produtos Personalizados";
+
+        traducoes.he.configuracoes = "הגדרות";
+        traducoes.he.produtosPreDeterminados = "מוצרים מוגדרים מראש";
+        traducoes.he.adicionar = "הוסף";
+        traducoes.he.produtosPersonalizados = "מוצרים מותאמים אישית";
+
+        // Carregar produtos ao inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            atualizarSelectProdutos();
+            carregarProdutos();
+        });
+
+        // Funções globais de configuração
+        window.configModal = null;
+
+        window.abrirConfiguracoes = function() {
+            if (!window.configModal) {
+                window.configModal = new bootstrap.Modal(document.getElementById('configModal'));
+            }
+            carregarProdutos();
+            window.configModal.show();
+        };
+
+        window.carregarProdutos = function() {
+            const listaProdutos = document.getElementById('listaProdutos');
+            listaProdutos.innerHTML = '';
+            
+            const produtos = JSON.parse(localStorage.getItem('produtos') || '[]');
+            
+            produtos.forEach(produto => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                li.innerHTML = `
+                    ${produto}
+                    <button class="btn btn-danger btn-sm" onclick="removerProduto('${produto}')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                `;
+                listaProdutos.appendChild(li);
+            });
+        };
+
+        window.adicionarProduto = function() {
+            const novoProduto = document.getElementById('novoProduto');
+            const produto = novoProduto.value.trim();
+            
+            if (!produto) return;
+            
+            const produtos = JSON.parse(localStorage.getItem('produtos') || '[]');
+            if (!produtos.includes(produto)) {
+                produtos.push(produto);
+                localStorage.setItem('produtos', JSON.stringify(produtos));
+                carregarProdutos();
+                atualizarSelectProdutos();
+            }
+            
+            novoProduto.value = '';
+        };
+
+        window.removerProduto = function(produto) {
+            let produtos = JSON.parse(localStorage.getItem('produtos') || '[]');
+            produtos = produtos.filter(p => p !== produto);
+            localStorage.setItem('produtos', JSON.stringify(produtos));
+            carregarProdutos();
+            atualizarSelectProdutos();
+        };
+
+        window.atualizarSelectProdutos = function() {
+            const select = document.getElementById('nomeProduto');
+            const produtosPersonalizados = JSON.parse(localStorage.getItem('produtos') || '[]');
+            
+            // Manter as opções padrão até o último optgroup
+            const optgroups = select.getElementsByTagName('optgroup');
+            const ultimoOptgroup = optgroups[optgroups.length - 1];
+            const indexUltimoOptgroup = Array.from(select.children).indexOf(ultimoOptgroup);
+            
+            // Remover opções personalizadas antigas
+            while (select.children.length > indexUltimoOptgroup + 2) {
+                select.removeChild(select.lastChild);
+            }
+            
+            // Adicionar novo optgroup para produtos personalizados
+            if (produtosPersonalizados.length > 0) {
+                const grupo = document.createElement('optgroup');
+                grupo.label = traducoes[idiomaAtual].produtosPersonalizados || 'Produtos Personalizados';
+                
+                produtosPersonalizados.forEach(produto => {
+                    const option = document.createElement('option');
+                    option.value = produto;
+                    option.textContent = produto;
+                    grupo.appendChild(option);
+                });
+                
+                select.insertBefore(grupo, select.lastChild);
+            }
+        };
+
+        // Adicione estas funções ao seu JavaScript existente
+        window.abrirBalanco = function() {
+            atualizarBalanco();
+            new bootstrap.Modal(document.getElementById('balancoModal')).show();
+        };
+
+        function atualizarBalanco() {
+            // Cálculos gerais
+            const totalVendas = vendas.length;
+            const custoTotal = vendas.reduce((acc, v) => acc + (parseFloat(v.precoCusto) || 0), 0);
+            const vendaTotal = vendas.reduce((acc, v) => acc + parseFloat(v.precoVenda), 0);
+            const lucroTotal = vendas.reduce((acc, v) => acc + parseFloat(v.lucro), 0);
+
+            // Status dos pagamentos
+            const vendasPagas = vendas.filter(v => v.statusPagamento === 'pago').length;
+            const vendasPendentes = totalVendas - vendasPagas;
+            const valorPago = vendas
+                .filter(v => v.statusPagamento === 'pago')
+                .reduce((acc, v) => acc + parseFloat(v.precoVenda), 0);
+            const valorPendente = vendas
+                .filter(v => v.statusPagamento === 'pendente')
+                .reduce((acc, v) => acc + parseFloat(v.precoVenda), 0);
+
+            // Atualizar elementos
+            document.getElementById('balancoTotalVendas').textContent = totalVendas;
+            document.getElementById('balancoCustoTotal').textContent = custoTotal.toFixed(2);
+            document.getElementById('balancoVendaTotal').textContent = vendaTotal.toFixed(2);
+            document.getElementById('balancoLucroTotal').textContent = lucroTotal.toFixed(2);
+            document.getElementById('balancoVendasPagas').textContent = vendasPagas;
+            document.getElementById('balancoVendasPendentes').textContent = vendasPendentes;
+            document.getElementById('balancoValorPago').textContent = valorPago.toFixed(2);
+            document.getElementById('balancoValorPendente').textContent = valorPendente.toFixed(2);
+        }
+
+        // Adicione ao objeto traducoes.pt
+        traducoes.pt.balanco = "Balanço";
+        traducoes.pt.balancoGeral = "Balanço Geral";
+        traducoes.pt.resumoGeral = "Resumo Geral";
+        traducoes.pt.totalVendas = "Total de Vendas";
+        traducoes.pt.custoTotal = "Custo Total";
+        traducoes.pt.vendaTotal = "Venda Total";
+        traducoes.pt.lucroTotal = "Lucro Total";
+        traducoes.pt.statusPagamentos = "Status dos Pagamentos";
+        traducoes.pt.vendasPagas = "Vendas Pagas";
+        traducoes.pt.vendasPendentes = "Vendas Pendentes";
+        traducoes.pt.valorPago = "Valor Pago";
+        traducoes.pt.valorPendente = "Valor Pendente";
+
+        // Adicione ao objeto traducoes.he
+        traducoes.he.balanco = "מאזן";
+        traducoes.he.balancoGeral = "מאזן כללי";
+        traducoes.he.resumoGeral = "סיכום כללי";
+        traducoes.he.totalVendas = "סך המכירות";
+        traducoes.he.custoTotal = "סך העלות";
+        traducoes.he.vendaTotal = "סך המכירה";
+        traducoes.he.lucroTotal = "סך הרווח";
+        traducoes.he.statusPagamentos = "סטטוס תשלומים";
+        traducoes.he.vendasPagas = "מכירות ששולמו";
+        traducoes.he.vendasPendentes = "מכירות ממתינות";
+        traducoes.he.valorPago = "סכום ששולם";
+        traducoes.he.valorPendente = "סכום ממתין";
+
+        // Função para enviar email automático após salvar venda
+        async function enviarEmailNovaVenda(venda) {
+            try {
+                const templateParams = {
+                    to_email: 'davidmeirshrem@gmail.com',
+                    to_name: String(venda.nomeComprador || ''),
+                    from_name: 'Sistema de Vendas',
+                    subject: 'Nova Venda Registrada',
+                    message: `
+                        Nova venda registrada com sucesso!
+
+                        Produto: ${venda.produto}
+                        Origem: ${venda.origemProduto || 'N/A'}
+                        Serial: ${venda.numeroSerial || 'N/A'}
+                        Data da Compra: ${new Date(venda.dataCompra).toLocaleDateString()}
+                        Data de Vencimento: ${new Date(venda.dataVencimento).toLocaleDateString()}
+                        Valor: ₪${venda.precoVenda}
+                        Status: ${venda.statusPagamento}
+                        Observações: ${venda.anotacoes || 'N/A'}
+                    `.trim()
+                };
+
+                await emailjs.send(
+                    'service_lb5yt39',
+                    'template_o0acrgq',
+                    templateParams,
+                    'hOEhCYJwa_99mn944'
+                );
+            } catch (error) {
+                console.error('Erro ao enviar email de nova venda:', error);
+            }
+        }
+
+        // Função para verificar vencimentos e enviar alertas
+        async function verificarVencimentos() {
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+
+            vendas.forEach(async (venda) => {
+                const dataVencimento = new Date(venda.dataVencimento);
+                dataVencimento.setHours(0, 0, 0, 0);
+
+                // Calcular diferença em dias
+                const diffDias = Math.floor((dataVencimento - hoje) / (1000 * 60 * 60 * 24));
+
+                // Alerta 7 dias antes
+                if (diffDias === 7) {
+                    try {
+                        const templateParams = {
+                            to_email: 'davidmeirshrem@gmail.com',
+                            to_name: String(venda.nomeComprador || ''),
+                            from_name: 'Sistema de Vendas',
+                            subject: 'Alerta: Produto Próximo ao Vencimento',
+                            message: `
+                                ALERTA: Produto irá vencer em 7 dias!
+
+                                Produto: ${venda.produto}
+                                Cliente: ${venda.nomeComprador}
+                                Data de Vencimento: ${new Date(venda.dataVencimento).toLocaleDateString()}
+                                Serial: ${venda.numeroSerial || 'N/A'}
+                            `.trim()
+                        };
+
+                        await emailjs.send('service_lb5yt39', 'template_o0acrgq', templateParams, 'hOEhCYJwa_99mn944');
+                    } catch (error) {
+                        console.error('Erro ao enviar alerta de 7 dias:', error);
+                    }
+                }
+
+                // Alerta no dia do vencimento
+                if (diffDias === 0) {
+                    try {
+                        const templateParams = {
+                            to_email: 'davidmeirshrem@gmail.com',
+                            to_name: String(venda.nomeComprador || ''),
+                            from_name: 'Sistema de Vendas',
+                            subject: 'Alerta: Produto Venceu Hoje',
+                            message: `
+                                ALERTA: Produto venceu hoje!
+
+                                Produto: ${venda.produto}
+                                Cliente: ${venda.nomeComprador}
+                                Data de Vencimento: ${new Date(venda.dataVencimento).toLocaleDateString()}
+                                Serial: ${venda.numeroSerial || 'N/A'}
+                            `.trim()
+                        };
+
+                        await emailjs.send('service_lb5yt39', 'template_o0acrgq', templateParams, 'hOEhCYJwa_99mn944');
+                    } catch (error) {
+                        console.error('Erro ao enviar alerta de vencimento:', error);
+                    }
+                }
+            });
+        }
+
+        // Modificar a função de salvar venda para incluir o envio de email
+        vendaForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!validarFormulario()) return;
+
+            try {
+                loadingModal.show();
+                
+                const venda = {
+                    id: Date.now(),
+                    produto: nomeProduto.value === 'Outro' ? outroNomeProduto.value : nomeProduto.value,
+                    origemProduto: document.getElementById('origemProduto').value,
+                    numeroSerial: document.getElementById('numeroSerial').value,
+                    nomeComprador: document.getElementById('nomeComprador').value,
+                    email: document.getElementById('emailComprador').value,
+                    telefoneComprador: document.getElementById('telefoneComprador').value,
+                    dataCompra: document.getElementById('dataCompra').value,
+                    dataVencimento: document.getElementById('dataVencimento').value,
+                    precoCusto: document.getElementById('precoCusto').value || '0',
+                    precoVenda: document.getElementById('precoVenda').value,
+                    lucro: document.getElementById('lucro').value,
+                    statusPagamento: document.getElementById('statusPagamento').value,
+                    anotacoes: document.getElementById('anotacoes').value,
+                    dataCriacao: new Date().toISOString()
+                };
+
+                const comprovanteInput = document.getElementById('comprovante');
+                if (comprovanteInput.files.length > 0) {
+                    const comprovante = await toBase64(comprovanteInput.files[0]);
+                    venda.comprovante = await comprimirImagem(comprovante);
+                }
+
+                vendas.push(venda);
+                
+                if (salvarVendas()) {
+                    mostrarFeedback('success', traducoes[idiomaAtual].vendaSalva);
+                    await enviarEmailNovaVenda(venda); // Enviar email após salvar
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }
+            } catch (error) {
+                console.error('Erro ao salvar venda:', error);
+                mostrarFeedback('error', traducoes[idiomaAtual].erroSalvar);
+            } finally {
+                loadingModal.hide();
+            }
+        });
+
+        // Configurar verificação diária de vencimentos
+        function iniciarVerificacaoVencimentos() {
+            // Verificar imediatamente ao carregar
+            verificarVencimentos();
+
+            // Configurar para verificar todo dia à meia-noite
+            const agora = new Date();
+            const proximaMeiaNoite = new Date(agora);
+            proximaMeiaNoite.setHours(24, 0, 0, 0);
+            const msAteProximaVerificacao = proximaMeiaNoite - agora;
+
+            // Primeira verificação na próxima meia-noite
+            setTimeout(() => {
+                verificarVencimentos();
+                // Depois, verificar a cada 24 horas
+                setInterval(verificarVencimentos, 24 * 60 * 60 * 1000);
+            }, msAteProximaVerificacao);
+        }
+
+        // Iniciar verificação de vencimentos quando a página carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            iniciarVerificacaoVencimentos();
+        });
+    </script>
+</body>
+</html> 
