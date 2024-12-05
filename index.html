@@ -1892,7 +1892,26 @@
             });
         }
 
-        // Modificar a função de salvar venda para incluir o envio de email
+          <!-- Scripts do Bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Inicialização do EmailJS
+        (function() {
+            emailjs.init({
+                publicKey: "hOEhCYJwa_99mn944"
+            });
+        })();
+
+        // Variáveis globais
+        let vendas = [];
+        const debugInfo = document.getElementById('debugInfo');
+        const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+        const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        const compartilharModal = new bootstrap.Modal(document.getElementById('compartilharModal'));
+        const vendaForm = document.getElementById('vendaForm');
+
+        // Event listener para o formulário
         vendaForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -1902,7 +1921,6 @@
                 loadingModal.show();
                 
                 const venda = {
-                    id: Date.now(),
                     produto: nomeProduto.value === 'Outro' ? outroNomeProduto.value : nomeProduto.value,
                     origemProduto: document.getElementById('origemProduto').value,
                     numeroSerial: document.getElementById('numeroSerial').value,
@@ -1925,14 +1943,11 @@
                     venda.comprovante = await comprimirImagem(comprovante);
                 }
 
-                vendas.push(venda);
-                
-                if (salvarVendas()) {
+                if (await salvarVenda(venda)) {
                     mostrarFeedback('success', traducoes[idiomaAtual].vendaSalva);
-                    await enviarEmailNovaVenda(venda); // Enviar email após salvar
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
+                    await enviarEmailNovaVenda(venda);
+                    await carregarVendas();
+                    vendaForm.reset();
                 }
             } catch (error) {
                 console.error('Erro ao salvar venda:', error);
@@ -1942,29 +1957,11 @@
             }
         });
 
-        // Configurar verificação diária de vencimentos
-        function iniciarVerificacaoVencimentos() {
-            // Verificar imediatamente ao carregar
-            verificarVencimentos();
-
-            // Configurar para verificar todo dia à meia-noite
-            const agora = new Date();
-            const proximaMeiaNoite = new Date(agora);
-            proximaMeiaNoite.setHours(24, 0, 0, 0);
-            const msAteProximaVerificacao = proximaMeiaNoite - agora;
-
-            // Primeira verificação na próxima meia-noite
-            setTimeout(() => {
-                verificarVencimentos();
-                // Depois, verificar a cada 24 horas
-                setInterval(verificarVencimentos, 24 * 60 * 60 * 1000);
-            }, msAteProximaVerificacao);
-        }
-
-        // Iniciar verificação de vencimentos quando a página carregar
+        // Inicialização
         document.addEventListener('DOMContentLoaded', function() {
+            carregarVendas();
             iniciarVerificacaoVencimentos();
         });
     </script>
 </body>
-</html> 
+</html>
