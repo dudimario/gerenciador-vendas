@@ -1361,31 +1361,21 @@ const db = firebase.firestore();
         }
 
         function excluirVenda(id) {
-            const venda = vendas.find(v => v.id === id);
-            if (!venda) return;
-
-            document.getElementById('confirmMessage').textContent = 
-                `${traducoes[idiomaAtual].confirmarExclusao}\n${venda.produto} - ${venda.nomeComprador}`;
-            
-            document.getElementById('confirmAction').onclick = async function() {
-                try {
-                    loadingModal.show();
-                    vendas = vendas.filter(v => v.id !== id);
-                    
-                    if (salvarVendas()) {
-                        mostrarFeedback('success', traducoes[idiomaAtual].vendaExcluida);
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
-                    }
-                } catch (error) {
-                    console.error('Erro ao excluir venda:', error);
-                    mostrarFeedback('error', traducoes[idiomaAtual].erroExcluir);
-                } finally {
-                    confirmModal.hide();
-                    loadingModal.hide();
-                }
-            };
+    confirmar(traducoes[idiomaAtual].confirmarExclusao, async () => {
+        try {
+            loadingModal.show();
+            await db.collection('vendas').doc(id).delete();
+            await carregarVendas();
+            mostrarFeedback('success', traducoes[idiomaAtual].vendaExcluida);
+        } catch (error) {
+            console.error('Erro ao excluir venda:', error);
+            mostrarFeedback('error', traducoes[idiomaAtual].erroExcluir);
+        } finally {
+            confirmModal.hide();
+            loadingModal.hide();
+        }
+    });
+}
             
             confirmModal.show();
         }
