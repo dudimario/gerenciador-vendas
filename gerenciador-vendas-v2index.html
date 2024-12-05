@@ -20,6 +20,28 @@
         })();
     </script>
 
+    <!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore-compat.js"></script>
+
+<script>
+// Configuração do Firebase
+const firebaseConfig = {
+    apiKey: "AIzaSyDnzDkInpxKQcx_Jw8MB-zIhTLzKyzNSyM",
+    authDomain: "gerenciador-vendas-ac4bf.firebaseapp.com",
+    projectId: "gerenciador-vendas-ac4bf",
+    storageBucket: "gerenciador-vendas-ac4bf.firebasestorage.app",
+    messagingSenderId: "789648456187",
+    appId: "1:789648456187:web:115afacd28fdecf27d335e"
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+
+// Inicializar Firestore
+const db = firebase.firestore();
+</script>
+  
     <style>
         :root {
             --cor-lucro: #28a745;
