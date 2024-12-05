@@ -1146,87 +1146,50 @@ const db = firebase.firestore();
         }
 
         // Event listener para o formulário
-        vendaForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            if (!validarFormulario()) return;
+       vendaForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    if (!validarFormulario()) return;
 
-            try {
-                loadingModal.show();
-                
-                const venda = {
-                    id: Date.now(),
-                    produto: nomeProduto.value === 'Outro' ? outroNomeProduto.value : nomeProduto.value,
-                    origemProduto: document.getElementById('origemProduto').value,
-                    numeroSerial: document.getElementById('numeroSerial').value,
-                    nomeComprador: document.getElementById('nomeComprador').value,
-                    email: document.getElementById('emailComprador').value,
-                    telefoneComprador: document.getElementById('telefoneComprador').value,
-                    dataCompra: document.getElementById('dataCompra').value,
-                    dataVencimento: document.getElementById('dataVencimento').value,
-                    precoCusto: document.getElementById('precoCusto').value || '0',
-                    precoVenda: document.getElementById('precoVenda').value,
-                    lucro: document.getElementById('lucro').value,
-                    statusPagamento: document.getElementById('statusPagamento').value,
-                    anotacoes: document.getElementById('anotacoes').value,
-                    dataCriacao: new Date().toISOString()
-                };
+    try {
+        loadingModal.show();
+        
+        const venda = {
+            produto: nomeProduto.value === 'Outro' ? outroNomeProduto.value : nomeProduto.value,
+            origemProduto: document.getElementById('origemProduto').value,
+            numeroSerial: document.getElementById('numeroSerial').value,
+            nomeComprador: document.getElementById('nomeComprador').value,
+            email: document.getElementById('emailComprador').value,
+            telefoneComprador: document.getElementById('telefoneComprador').value,
+            dataCompra: document.getElementById('dataCompra').value,
+            dataVencimento: document.getElementById('dataVencimento').value,
+            precoCusto: document.getElementById('precoCusto').value || '0',
+            precoVenda: document.getElementById('precoVenda').value,
+            lucro: document.getElementById('lucro').value,
+            statusPagamento: document.getElementById('statusPagamento').value,
+            anotacoes: document.getElementById('anotacoes').value,
+            dataCriacao: new Date().toISOString()
+        };
 
-                const comprovanteInput = document.getElementById('comprovante');
-                if (comprovanteInput.files.length > 0) {
-                    const comprovante = await toBase64(comprovanteInput.files[0]);
-                    venda.comprovante = await comprimirImagem(comprovante);
-                }
+        const comprovanteInput = document.getElementById('comprovante');
+        if (comprovanteInput.files.length > 0) {
+            const comprovante = await toBase64(comprovanteInput.files[0]);
+            venda.comprovante = await comprimirImagem(comprovante);
+        }
 
-                vendas.push(venda);
-                
-                if (salvarVendas()) {
-                    mostrarFeedback('success', traducoes[idiomaAtual].vendaSalva);
-                    
-                    // Enviar email usando o mesmo método que funciona no botão
-                    const templateParams = {
-                        to_email: 'davidmeirshrem@gmail.com',
-                        to_name: String(venda.nomeComprador || ''),
-                        from_name: 'Sistema de Vendas',
-                        subject: 'Nova Venda Registrada',
-                        message: `
-                            Nova venda registrada com sucesso!
-
-                            Produto: ${venda.produto}
-                            Origem: ${venda.origemProduto || 'N/A'}
-                            Serial: ${venda.numeroSerial || 'N/A'}
-                            Data da Compra: ${new Date(venda.dataCompra).toLocaleDateString()}
-                            Data de Vencimento: ${new Date(venda.dataVencimento).toLocaleDateString()}
-                            Valor: ₪${venda.precoVenda}
-                            Status: ${venda.statusPagamento}
-                            Observações: ${venda.anotacoes || 'N/A'}
-                        `.trim()
-                    };
-
-                    try {
-                        const response = await emailjs.send(
-                            'service_lb5yt39',
-                            'template_o0acrgq',
-                            templateParams,
-                            'hOEhCYJwa_99mn944'
-                        );
-                        console.log('Email enviado:', response);
-                    } catch (emailError) {
-                        console.error('Erro ao enviar email:', emailError);
-                    }
-
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                }
-            } catch (error) {
-                console.error('Erro ao salvar venda:', error);
-                mostrarFeedback('error', traducoes[idiomaAtual].erroSalvar);
-            } finally {
-                loadingModal.hide();
-            }
-        });
-
+        if (await salvarVenda(venda)) {
+            mostrarFeedback('success', traducoes[idiomaAtual].vendaSalva);
+            await enviarEmailNovaVenda(venda);
+            await carregarVendas();
+            vendaForm.reset();
+        }
+    } catch (error) {
+        console.error('Erro ao salvar venda:', error);
+        mostrarFeedback('error', traducoes[idiomaAtual].erroSalvar);
+    } finally {
+        loadingModal.hide();
+    }
+});
         // Funções auxiliares para processamento de imagem
         function toBase64(file) {
             return new Promise((resolve, reject) => {
