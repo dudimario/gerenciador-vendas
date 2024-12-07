@@ -22,9 +22,11 @@ db.collection('vendas').get()
     .then(snapshot => {
         console.log('Conexão com Firebase OK!');
         console.log('Número de vendas:', snapshot.size);
+        carregarVendas(); // Carregar vendas após confirmar conexão
     })
     .catch(error => {
         console.error('Erro na conexão com Firebase:', error);
+        alert('Erro ao conectar com o banco de dados. Verifique sua conexão.');
     });
 
 // Função para calcular data de vencimento
@@ -82,38 +84,58 @@ function calcularLucro() {
 // Funções do Firebase
 async function carregarVendas() {
     try {
+        console.log('Iniciando carregamento de vendas...');
         const snapshot = await db.collection('vendas').get();
-        vendas = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
-        console.log('Vendas carregadas:', vendas.length);
+        
+        // Limpar array atual
+        vendas = [];
+        
+        // Mapear documentos
+        snapshot.forEach(doc => {
+            vendas.push({
+                id: doc.id,
+                ...doc.data()
+            });
+        });
+
+        console.log('Vendas carregadas com sucesso:', vendas.length);
+        
+        // Atualizar interface
         updateDebugInfo();
         atualizarTabela();
+        
+        return true;
     } catch (error) {
         console.error('Erro ao carregar vendas:', error);
-        alert('Erro ao carregar banco de dados.');
+        alert('Erro ao carregar banco de dados: ' + error.message);
+        return false;
     }
 }
 
 async function salvarVenda(venda) {
     try {
+        console.log('Iniciando salvamento da venda:', venda);
         const docRef = await db.collection('vendas').add(venda);
         console.log('Venda salva com ID:', docRef.id);
+        await carregarVendas(); // Recarregar vendas após salvar
         return true;
     } catch (error) {
         console.error('Erro ao salvar venda:', error);
+        alert('Erro ao salvar venda: ' + error.message);
         return false;
     }
 }
 
 async function excluirVenda(id) {
     try {
+        console.log('Excluindo venda:', id);
         await db.collection('vendas').doc(id).delete();
-        await carregarVendas();
+        console.log('Venda excluída com sucesso');
+        await carregarVendas(); // Recarregar vendas após excluir
         return true;
     } catch (error) {
         console.error('Erro ao excluir venda:', error);
+        alert('Erro ao excluir venda: ' + error.message);
         return false;
     }
 }
@@ -196,10 +218,18 @@ function updateDebugInfo() {
 // Função para atualizar tabela
 function atualizarTabela() {
     const todasVendas = document.getElementById('todasVendas');
-    if (!todasVendas) return;
+    if (!todasVendas) {
+        console.error('Elemento todasVendas não encontrado');
+        return;
+    }
     
     todasVendas.innerHTML = '';
-    if (!vendas.length) return;
+    if (!vendas.length) {
+        console.log('Nenhuma venda para exibir');
+        return;
+    }
+
+    console.log('Atualizando tabela com', vendas.length, 'vendas');
 
     const vendasPorMes = {};
     vendas.sort((a, b) => new Date(b.dataCompra) - new Date(a.dataCompra))
@@ -211,7 +241,10 @@ function atualizarTabela() {
 
     Object.entries(vendasPorMes).forEach(([mesAno, vendasDoMes]) => {
         const template = document.getElementById('templateGrupoMes');
-        if (!template) return;
+        if (!template) {
+            console.error('Template não encontrado');
+            return;
+        }
 
         const clone = template.content.cloneNode(true);
         const mesAnoElement = clone.querySelector('.mes-ano');
@@ -226,6 +259,7 @@ function atualizarTabela() {
                 { month: 'long', year: 'numeric' }
             );
         } catch (error) {
+            console.error('Erro ao formatar data:', error);
             mesAnoElement.textContent = `${mes}/${ano}`;
         }
 
@@ -240,12 +274,13 @@ function atualizarTabela() {
 
         todasVendas.appendChild(clone);
     });
+
+    console.log('Tabela atualizada com sucesso');
 }
 
 // Event listeners
 document.addEventListener('DOMContentLoaded', function() {
-    // Carregar vendas iniciais
-    carregarVendas();
+    console.log('Inicializando aplicação...');
 
     // Adicionar event listeners para cálculos automáticos
     document.getElementById('dataCompra').addEventListener('change', calcularDataVencimento);
@@ -294,7 +329,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (await salvarVenda(venda)) {
                 await enviarEmailNovaVenda(venda);
-                await carregarVendas();
                 this.reset();
                 alert('Venda salva com sucesso!');
             }
@@ -302,9 +336,19 @@ document.addEventListener('DOMContentLoaded', function() {
             loadingModal.hide();
         } catch (error) {
             console.error('Erro ao salvar venda:', error);
-            alert('Erro ao salvar venda');
+            alert('Erro ao salvar venda: ' + error.message);
+            const loadingModal = bootstrap.Modal.getInstance(document.getElementById('loadingModal'));
+            if (loadingModal) loadingModal.hide();
         }
     });
+
+    // Event listeners para os botões
+    document.getElementById('btnExportar')?.addEventListener('click', exportarParaExcel);
+    document.getElementById('btnBalanco')?.addEventListener('click', abrirBalanco);
+    document.getElementById('btnDebug')?.addEventListener('click', toggleDebug);
+    document.getElementById('btnLimpar')?.addEventListener('click', limparBancoDados);
+
+    console.log('Event listeners configurados');
 });
 
 // Funções auxiliares
@@ -344,6 +388,107 @@ async function comprimirImagem(base64Str) {
             resolve(canvas.toDataURL('image/jpeg', 0.7));
         };
     });
+}
+
+// Função para exportar para Excel
+function exportarParaExcel() {
+    try {
+        const headers = [
+            'Produto', 'Origem', 'Serial', 'Nome', 'Email', 'Telefone',
+            'Data Compra', 'Vencimento', 'Custo', 'Venda', 'Lucro', 'Status', 'Anotações'
+        ];
+
+        const dados = vendas.map(venda => [
+            venda.produto,
+            venda.origemProduto || '',
+            venda.numeroSerial || '',
+            venda.nomeComprador,
+            venda.email || '',
+            venda.telefoneComprador || '',
+            new Date(venda.dataCompra).toLocaleDateString(),
+            new Date(venda.dataVencimento).toLocaleDateString(),
+            venda.precoCusto || '0',
+            venda.precoVenda,
+            venda.lucro,
+            venda.statusPagamento,
+            venda.anotacoes || ''
+        ]);
+
+        const csvContent = [headers, ...dados]
+            .map(row => row.map(cell => `"${cell}"`).join(','))
+            .join('\n');
+
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `vendas_${new Date().toLocaleDateString()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        alert('Arquivo exportado com sucesso!');
+    } catch (error) {
+        console.error('Erro ao exportar:', error);
+        alert('Erro ao exportar arquivo');
+    }
+}
+
+// Função para abrir balanço
+function abrirBalanco() {
+    const modal = new bootstrap.Modal(document.getElementById('balancoModal'));
+    
+    // Calcular totais
+    const totalVendas = vendas.length;
+    const custoTotal = vendas.reduce((acc, v) => acc + (parseFloat(v.precoCusto) || 0), 0);
+    const vendaTotal = vendas.reduce((acc, v) => acc + parseFloat(v.precoVenda), 0);
+    const lucroTotal = vendas.reduce((acc, v) => acc + parseFloat(v.lucro), 0);
+
+    // Status dos pagamentos
+    const vendasPagas = vendas.filter(v => v.statusPagamento === 'pago');
+    const vendasPendentes = vendas.filter(v => v.statusPagamento === 'pendente');
+    const valorPago = vendasPagas.reduce((acc, v) => acc + parseFloat(v.precoVenda), 0);
+    const valorPendente = vendasPendentes.reduce((acc, v) => acc + parseFloat(v.precoVenda), 0);
+
+    // Atualizar elementos
+    document.getElementById('balancoTotalVendas').textContent = totalVendas;
+    document.getElementById('balancoCustoTotal').textContent = custoTotal.toFixed(2);
+    document.getElementById('balancoVendaTotal').textContent = vendaTotal.toFixed(2);
+    document.getElementById('balancoLucroTotal').textContent = lucroTotal.toFixed(2);
+    document.getElementById('balancoVendasPagas').textContent = vendasPagas.length;
+    document.getElementById('balancoVendasPendentes').textContent = vendasPendentes.length;
+    document.getElementById('balancoValorPago').textContent = valorPago.toFixed(2);
+    document.getElementById('balancoValorPendente').textContent = valorPendente.toFixed(2);
+
+    modal.show();
+}
+
+// Função para toggle debug info
+function toggleDebug() {
+    const debugInfo = document.getElementById('debugInfo');
+    debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+    updateDebugInfo();
+}
+
+// Função para limpar banco de dados
+function limparBancoDados() {
+    if (!confirm('Tem certeza que deseja limpar todo o banco de dados?')) return;
+
+    const batch = db.batch();
+    vendas.forEach(venda => {
+        const ref = db.collection('vendas').doc(venda.id);
+        batch.delete(ref);
+    });
+
+    batch.commit()
+        .then(() => {
+            vendas = [];
+            atualizarTabela();
+            alert('Banco de dados limpo com sucesso!');
+        })
+        .catch(error => {
+            console.error('Erro ao limpar banco:', error);
+            alert('Erro ao limpar banco de dados');
+        });
 }
 
 // Função para enviar email
