@@ -117,6 +117,63 @@ async function excluirVenda(id) {
     }
 }
 
+// Função para gerar linha da tabela
+function gerarLinhaTabela(venda) {
+    return `
+        <td>
+            <input type="checkbox" class="form-check-input selecao-venda" data-id="${venda.id}">
+        </td>
+        <td>
+            ${venda.produto}
+            ${venda.origemProduto ? `<br><small class="text-muted"><strong>Origem</strong>: ${venda.origemProduto}</small>` : ''}
+            ${venda.numeroSerial ? `<br><small class="text-muted"><strong>Serial</strong>: ${venda.numeroSerial}</small>` : ''}
+        </td>
+        <td>
+            ${venda.nomeComprador}
+            ${venda.email ? `<br><small class="text-muted"><i class="bi bi-envelope"></i> ${venda.email}</small>` : ''}
+            ${venda.telefoneComprador ? `<br><small class="text-muted"><i class="bi bi-telephone"></i> ${venda.telefoneComprador}</small>` : ''}
+        </td>
+        <td>${new Date(venda.dataCompra).toLocaleDateString()}</td>
+        <td>${new Date(venda.dataVencimento).toLocaleDateString()}</td>
+        <td>
+            ${venda.comprovante ? 
+                `<button class="btn btn-info btn-sm" onclick="visualizarComprovante('${venda.id}')">
+                    <i class="bi bi-image"></i> Ver
+                </button>` : 
+                'N/A'}
+        </td>
+        <td class="valor-custo currency">${venda.precoCusto ? parseFloat(venda.precoCusto).toFixed(2) : '0.00'}</td>
+        <td class="valor-venda currency">${parseFloat(venda.precoVenda).toFixed(2)}</td>
+        <td class="valor-lucro currency">${parseFloat(venda.lucro).toFixed(2)}</td>
+        <td>
+            <span class="badge ${venda.statusPagamento === 'pago' ? 'bg-success' : 'bg-warning'}">
+                ${venda.statusPagamento === 'pago' ? 'Pago' : 'Pendente'}
+            </span>
+            ${venda.anotacoes ? 
+                `<br><small class="text-muted anotacao-preview">
+                    <i class="bi bi-sticky"></i> ${venda.anotacoes}
+                </small>` : 
+                ''}
+        </td>
+        <td>
+            <div class="btn-group">
+                <button class="btn btn-primary btn-sm" onclick="editarVenda('${venda.id}')">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="excluirVenda('${venda.id}')">
+                    <i class="bi bi-trash"></i>
+                </button>
+                <button class="btn btn-success btn-sm" onclick="enviarEmail('${venda.id}')">
+                    <i class="bi bi-envelope"></i>
+                </button>
+                <button class="btn btn-info btn-sm" onclick="abrirCompartilhar('${venda.id}')">
+                    <i class="bi bi-share"></i>
+                </button>
+            </div>
+        </td>
+    `;
+}
+
 // Função para atualizar debug info
 function updateDebugInfo() {
     const debugInfo = document.getElementById('debugInfo');
@@ -195,4 +252,123 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('duracaoPersonalizada').addEventListener('input', calcularDataVencimento);
     document.getElementById('precoVenda').addEventListener('input', calcularLucro);
     document.getElementById('precoCusto').addEventListener('input', calcularLucro);
+
+    // Event listener do formulário
+    document.getElementById('vendaForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        try {
+            const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            loadingModal.show();
+            
+            const venda = {
+                produto: document.getElementById('nomeProduto').value === 'Outro' ? 
+                         document.getElementById('outroNomeProduto').value : 
+                         document.getElementById('nomeProduto').value,
+                origemProduto: document.getElementById('origemProduto').value,
+                numeroSerial: document.getElementById('numeroSerial').value,
+                nomeComprador: document.getElementById('nomeComprador').value,
+                email: document.getElementById('emailComprador').value,
+                telefoneComprador: document.getElementById('telefoneComprador').value,
+                dataCompra: document.getElementById('dataCompra').value,
+                dataVencimento: document.getElementById('dataVencimento').value,
+                precoCusto: document.getElementById('precoCusto').value || '0',
+                precoVenda: document.getElementById('precoVenda').value,
+                lucro: document.getElementById('lucro').value,
+                statusPagamento: document.getElementById('statusPagamento').value,
+                anotacoes: document.getElementById('anotacoes').value,
+                dataCriacao: new Date().toISOString()
+            };
+
+            const comprovanteInput = document.getElementById('comprovante');
+            if (comprovanteInput.files.length > 0) {
+                const comprovante = await toBase64(comprovanteInput.files[0]);
+                venda.comprovante = await comprimirImagem(comprovante);
+            }
+
+            if (await salvarVenda(venda)) {
+                await enviarEmailNovaVenda(venda);
+                await carregarVendas();
+                this.reset();
+                alert('Venda salva com sucesso!');
+            }
+        } catch (error) {
+            console.error('Erro ao salvar venda:', error);
+            alert('Erro ao salvar venda');
+        } finally {
+            loadingModal.hide();
+        }
+    });
 });
+
+// Funções auxiliares
+async function toBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
+async function comprimirImagem(base64Str) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.src = base64Str;
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            let width = img.width;
+            let height = img.height;
+            const maxSize = 800;
+            
+            if (width > height && width > maxSize) {
+                height = height * (maxSize / width);
+                width = maxSize;
+            } else if (height > maxSize) {
+                width = width * (maxSize / height);
+                height = maxSize;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.7));
+        };
+    });
+}
+
+// Função para enviar email
+async function enviarEmailNovaVenda(venda) {
+    try {
+        const templateParams = {
+            to_email: 'davidmeirshrem@gmail.com',
+            to_name: String(venda.nomeComprador || ''),
+            from_name: 'Sistema de Vendas',
+            subject: 'Nova Venda Registrada',
+            message: `
+                Nova venda registrada com sucesso!
+
+                Produto: ${venda.produto}
+                Origem: ${venda.origemProduto || 'N/A'}
+                Serial: ${venda.numeroSerial || 'N/A'}
+                Data da Compra: ${new Date(venda.dataCompra).toLocaleDateString()}
+                Data de Vencimento: ${new Date(venda.dataVencimento).toLocaleDateString()}
+                Valor: ₪${venda.precoVenda}
+                Status: ${venda.statusPagamento}
+                Observações: ${venda.anotacoes || 'N/A'}
+            `.trim()
+        };
+
+        await emailjs.send(
+            'service_lb5yt39',
+            'template_o0acrgq',
+            templateParams,
+            'hOEhCYJwa_99mn944'
+        );
+    } catch (error) {
+        console.error('Erro ao enviar email:', error);
+    }
+}
