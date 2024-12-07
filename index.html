@@ -151,7 +151,6 @@
     </style>
 </head>
 <body>
-    <body>
     <!-- Botão de Idioma -->
     <button class="btn btn-outline-primary btn-idioma" onclick="alternarIdioma()">
         <i class="bi bi-translate"></i> PT/עב
@@ -227,8 +226,7 @@
                             <div class="invalid-feedback" data-translate="origemObrigatoria">Por favor, informe a origem do produto</div>
                         </div>
                     </div>
-
-                    <!-- Segunda linha: Nome e Serial -->
+                                        <!-- Segunda linha: Nome e Serial -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label" data-translate="nomeComprador">Nome do Comprador</label>
@@ -296,7 +294,7 @@
                         </div>
                     </div>
 
-                    <!-- Sétima linha: Status -->
+                    <!-- Sétima linha: Status e Anotações -->
                     <div class="row">
                         <div class="col-md-12 mb-3">
                             <label class="form-label" data-translate="statusPagamento">Status do Pagamento</label>
@@ -308,7 +306,6 @@
                         </div>
                     </div>
 
-                    <!-- Oitava linha: Anotações -->
                     <div class="row">
                         <div class="col-12 mb-3">
                             <label class="form-label" data-translate="anotacoes">Anotações</label>
@@ -433,12 +430,12 @@
                 <i class="bi bi-graph-up"></i> <span data-translate="balanco">Balanço</span>
             </button>
         </div>
-
-        <!-- Tabela de Todas as Vendas -->
+                <!-- Tabela de Todas as Vendas -->
         <div id="todasVendas">
             <!-- Os grupos de meses serão inseridos aqui dinamicamente -->
         </div>
-                <!-- Template para Grupo de Mês -->
+
+        <!-- Template para Grupo de Mês -->
         <template id="templateGrupoMes">
             <div class="grupo-mes mb-4">
                 <div class="card">
@@ -534,8 +531,7 @@
             </div>
         </div>
     </div>
-
-    <!-- Modal de Visualização de Comprovante -->
+        <!-- Modal de Visualização de Comprovante -->
     <div class="modal fade" id="comprovanteModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -615,239 +611,8 @@
             </div>
         </div>
     </div>
-        <!-- Scripts do Bootstrap -->
+
+    <!-- Scripts do Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <script>
-        // Inicialização do EmailJS
-        (function() {
-            emailjs.init({
-                publicKey: "hOEhCYJwa_99mn944"
-            });
-        })();
-
-        // Sistema de tradução
-        const traducoes = {
-            pt: {
-                titulo: "Gerenciador de Vendas de Assinaturas",
-                novaVenda: "Nova Venda",
-                produto: "Produto",
-                duracao: "Duração",
-                origem: "Origem do Produto",
-                nomeComprador: "Nome do Comprador",
-                email: "Email",
-                emailComprador: "Email do Comprador (opcional)",
-                dataCompra: "Data da Compra",
-                dataVencimento: "Data de Vencimento",
-                precoCusto: "Preço de Custo",
-                precoVenda: "Preço de Venda",
-                lucro: "Lucro",
-                status: "Status",
-                statusPagamento: "Status do Pagamento",
-                pago: "Pago",
-                pendente: "Pendente",
-                anotacoes: "Anotações",
-                buscar: "Buscar",
-                exportar: "Exportar para Excel",
-                compartilhar: "Compartilhar",
-                selecioneProduto: "Selecione um produto",
-                digiteProduto: "Digite o nome do produto",
-                produtoObrigatorio: "Por favor, selecione um produto",
-                selecioneDuracao: "Selecione a duração",
-                umMes: "1 mês",
-                tresMeses: "3 meses",
-                seisMeses: "6 meses",
-                umAno: "1 ano",
-                doisAnos: "2 anos",
-                tresAnos: "3 anos",
-                paraSempre: "Para sempre",
-                personalizado: "Personalizado",
-                digiteMeses: "Digite o número de meses",
-                duracaoObrigatoria: "Por favor, selecione a duração",
-                origemObrigatoria: "Por favor, informe a origem do produto",
-                nomeObrigatorio: "Por favor, informe o nome do comprador",
-                emailInvalido: "Por favor, informe um email válido",
-                dataObrigatoria: "Por favor, selecione a data",
-                precoObrigatorio: "Por favor, informe o preço",
-                vendaSalva: "Venda salva com sucesso!",
-                erroSalvar: "Erro ao salvar venda",
-                confirmarExclusao: "Tem certeza que deseja excluir esta venda?",
-                vendaExcluida: "Venda excluída com sucesso!",
-                exportadoSucesso: "Arquivo exportado com sucesso!",
-                erroExportar: "Erro ao exportar arquivo",
-                carregando: "Carregando...",
-                processando: "Processando...",
-                confirmacao: "Confirmação",
-                cancelar: "Cancelar",
-                confirmar: "Confirmar",
-                atualizar: "Atualizar Venda",
-                detalhesVenda: "Detalhes da Venda",
-                todosCampos: "Todos os campos",
-                encontrados: "Encontrados",
-                total: "Total",
-                acoes: "Ações",
-                excluirSelecionados: "Excluir Selecionados",
-                limparBanco: "Limpar Banco de Dados",
-                debug: "Debug Info",
-                confirmarExclusaoMultipla: "Tem certeza que deseja excluir as vendas selecionadas?",
-                itensSelecionados: "itens selecionados",
-                vendasExcluidas: "Vendas excluídas com sucesso!",
-                configuracoes: "Configurações",
-                produtosPreDeterminados: "Produtos Pré-determinados",
-                adicionar: "Adicionar",
-                produtosPersonalizados: "Produtos Personalizados",
-                balanco: "Balanço",
-                balancoGeral: "Balanço Geral",
-                resumoGeral: "Resumo Geral",
-                totalVendas: "Total de Vendas",
-                custoTotal: "Custo Total",
-                vendaTotal: "Venda Total",
-                lucroTotal: "Lucro Total",
-                statusPagamentos: "Status dos Pagamentos",
-                vendasPagas: "Vendas Pagas",
-                vendasPendentes: "Vendas Pendentes",
-                valorPago: "Valor Pago",
-                valorPendente: "Valor Pendente",
-                telefoneInvalido: "Por favor, informe um telefone válido",
-                telefoneComprador: "Telefone do Comprador (opcional)",
-                verComprovante: "Ver",
-                origem_label: "Origem",
-                serial_label: "Serial",
-                naoDisponivel: "N/A"
-            },
-            he: {
-                titulo: "מנהל מכירות מנויים",
-                novaVenda: "מכירה חדשה",
-                produto: "מוצר",
-                duracao: "משך זמן",
-                origem: "מקור המוצר",
-                nomeComprador: "שם הקונה",
-                email: "אימייל",
-                emailComprador: "דוא״ל הקונה (אופציונלי)",
-                dataCompra: "תאריך קנייה",
-                dataVencimento: "תאריך תפוגה",
-                precoCusto: "מחיר עלות",
-                precoVenda: "מחיר מכירה",
-                lucro: "רווח",
-                status: "סטטוס",
-                statusPagamento: "סטטוס תשלום",
-                pago: "שולם",
-                pendente: "ממתין",
-                anotacoes: "הערות",
-                buscar: "חיפוש",
-                exportar: "ייצוא לאקסל",
-                compartilhar: "שיתוף",
-                selecioneProduto: "בחר מוצר",
-                digiteProduto: "הקלד את שם המוצר",
-                produtoObrigatorio: "אנא בחר מוצר",
-                selecioneDuracao: "בחר משך זמן",
-                umMes: "חודש אחד",
-                tresMeses: "3 חודשים",
-                seisMeses: "6 חודשים",
-                umAno: "שנה",
-                doisAnos: "שנתיים",
-                tresAnos: "3 שנים",
-                paraSempre: "לצמיתות",
-                personalizado: "מותאם אישית",
-                digiteMeses: "הקלד מספר חודשים",
-                duracaoObrigatoria: "אנא בחר משך זמן",
-                origemObrigatoria: "אנא הזן את מקור המוצר",
-                nomeObrigatorio: "אנא הזן את שם הקונה",
-                emailInvalido: "אנא הזן כתובת אימייל תקינה",
-                dataObrigatoria: "אנא בחר תאריך",
-                precoObrigatorio: "אנא הזן מחיר",
-                vendaSalva: "המכירה נשמרה בהצלחה!",
-                erroSalvar: "שגיאה בשמירת המכירה",
-                confirmarExclusao: "האם אתה בטוח שברצונך למחוק מכירה זו?",
-                vendaExcluida: "המכירה נמחקה בהצלחה!",
-                exportadoSucesso: "הקובץ יוצא בהצלחה!",
-                erroExportar: "שגיאה בייצוא הקובץ",
-                carregando: "טוען...",
-                processando: "מעבד...",
-                confirmacao: "אישור",
-                cancelar: "ביטל",
-                confirmar: "אישור",
-                atualizar: "עדכן מכירה",
-                detalhesVenda: "פרטי מכירה",
-                todosCampos: "כל השדות",
-                encontrados: "נמצאו",
-                total: "סה״כ",
-                acoes: "פעולות",
-                excluirSelecionados: "מחק נבחרים",
-                limparBanco: "נקה מסד נתונים",
-                debug: "מידע דיבאג",
-                confirmarExclusaoMultipla: "האם אתה בטוח שברצונך למחוק את המכירות שנבחרו?",
-                itensSelecionados: "פריטים נבחרו",
-                vendasExcluidas: "המכירות נמחקו בהצלחה!",
-                configuracoes: "הגדרות",
-                produtosPreDeterminados: "מוצרים מוגדרים מראש",
-                adicionar: "הוסף",
-                produtosPersonalizados: "מוצרים מותאמים אישית",
-                balanco: "מאזן",
-                balancoGeral: "מאזן כללי",
-                resumoGeral: "סיכום כללי",
-                totalVendas: "סך המכירות",
-                custoTotal: "סך העלות",
-                vendaTotal: "סך המכירה",
-                lucroTotal: "סך הרווח",
-                statusPagamentos: "סטטוס תשלומים",
-                vendasPagas: "מכירות ששולמו",
-                vendasPendentes: "מכירות ממתינות",
-                valorPago: "סכום ששולם",
-                valorPendente: "סכום ממתין",
-                telefoneInvalido: "אנא הזן מספר טלפון תקין",
-                telefoneComprador: "טלפון הקונה (אופציונלי)",
-                verComprovante: "צפה",
-                origem_label: "מקור",
-                serial_label: "סידורי",
-                naoDisponivel: "לא זמין"
-            }
-        };
-
-        let idiomaAtual = 'pt';
-
-        // Função para alternar idioma
-        window.alternarIdioma = function() {
-            idiomaAtual = idiomaAtual === 'pt' ? 'he' : 'pt';
-            document.documentElement.setAttribute('dir', idiomaAtual === 'he' ? 'rtl' : 'ltr');
-            document.documentElement.setAttribute('lang', idiomaAtual);
-            traduzirInterface();
-        };
-
-        // Função para traduzir interface
-        function traduzirInterface() {
-            document.querySelectorAll('[data-translate]').forEach(elemento => {
-                const chave = elemento.getAttribute('data-translate');
-                if (traducoes[idiomaAtual][chave]) {
-                    elemento.textContent = traducoes[idiomaAtual][chave];
-                }
-            });
-
-            document.querySelectorAll('[data-translate-placeholder]').forEach(elemento => {
-                const chave = elemento.getAttribute('data-translate-placeholder');
-                if (traducoes[idiomaAtual][chave]) {
-                    elemento.placeholder = traducoes[idiomaAtual][chave];
-                }
-            });
-        }
-
-        // Event listeners para cálculos automáticos
-        document.getElementById('dataCompra').addEventListener('change', calcularDataVencimento);
-        document.getElementById('duracaoProduto').addEventListener('change', function() {
-            const duracaoPersonalizada = document.getElementById('duracaoPersonalizada');
-            duracaoPersonalizada.style.display = this.value === 'custom' ? 'block' : 'none';
-            calcularDataVencimento();
-        });
-        document.getElementById('duracaoPersonalizada').addEventListener('input', calcularDataVencimento);
-        document.getElementById('precoVenda').addEventListener('input', calcularLucro);
-        document.getElementById('precoCusto').addEventListener('input', calcularLucro);
-
-        // Inicialização
-        document.addEventListener('DOMContentLoaded', function() {
-            carregarVendas();
-            iniciarVerificacaoVencimentos();
-            traduzirInterface();
-        });
-    </script>
 </body>
 </html>
