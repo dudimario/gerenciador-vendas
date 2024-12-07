@@ -12,6 +12,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// Variáveis globais
+let vendas = [];
+let idiomaAtual = 'pt';
+
 // Teste de conexão
 console.log('Testando conexão com Firebase...');
 db.collection('vendas').get()
@@ -22,9 +26,6 @@ db.collection('vendas').get()
     .catch(error => {
         console.error('Erro na conexão com Firebase:', error);
     });
-
-// Array global para vendas
-let vendas = [];
 
 // Função para calcular data de vencimento
 function calcularDataVencimento() {
@@ -219,10 +220,14 @@ function atualizarTabela() {
 
         const [ano, mes] = mesAno.split('-');
         const data = new Date(ano, mes - 1);
-        mesAnoElement.textContent = data.toLocaleDateString(idiomaAtual === 'he' ? 'he-IL' : 'pt-BR', {
-            month: 'long',
-            year: 'numeric'
-        });
+        try {
+            mesAnoElement.textContent = data.toLocaleDateString(
+                idiomaAtual === 'he' ? 'he-IL' : 'pt-BR',
+                { month: 'long', year: 'numeric' }
+            );
+        } catch (error) {
+            mesAnoElement.textContent = `${mes}/${ano}`;
+        }
 
         const total = vendasDoMes.reduce((acc, venda) => acc + parseFloat(venda.lucro), 0);
         totalMes.textContent = total.toFixed(2);
@@ -258,7 +263,8 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         try {
-            const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            const loadingModalEl = document.getElementById('loadingModal');
+            const loadingModal = new bootstrap.Modal(loadingModalEl);
             loadingModal.show();
             
             const venda = {
@@ -292,11 +298,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.reset();
                 alert('Venda salva com sucesso!');
             }
+
+            loadingModal.hide();
         } catch (error) {
             console.error('Erro ao salvar venda:', error);
             alert('Erro ao salvar venda');
-        } finally {
-            loadingModal.hide();
         }
     });
 });
