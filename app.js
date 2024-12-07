@@ -25,6 +25,9 @@ db.collection('vendas').get()
         console.error('Erro na conexão com Firebase:', error);
     });
 
+// Array global para vendas
+let vendas = [];
+
 // Funções do Firebase
 async function carregarVendas() {
     try {
@@ -95,4 +98,119 @@ async function enviarEmailNovaVenda(venda) {
     } catch (error) {
         console.error('Erro ao enviar email de nova venda:', error);
     }
+}
+
+// Função para verificar vencimentos
+async function verificarVencimentos() {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    vendas.forEach(async (venda) => {
+        const dataVencimento = new Date(venda.dataVencimento);
+        dataVencimento.setHours(0, 0, 0, 0);
+
+        const diffDias = Math.floor((dataVencimento - hoje) / (1000 * 60 * 60 * 24));
+
+        if (diffDias === 7 || diffDias === 0) {
+            try {
+                const templateParams = {
+                    to_email: 'davidmeirshrem@gmail.com',
+                    to_name: String(venda.nomeComprador || ''),
+                    from_name: 'Sistema de Vendas',
+                    subject: diffDias === 7 ? 'Alerta: Produto Próximo ao Vencimento' : 'Alerta: Produto Venceu Hoje',
+                    message: `
+                        ${diffDias === 7 ? 'ALERTA: Produto irá vencer em 7 dias!' : 'ALERTA: Produto venceu hoje!'}
+
+                        Produto: ${venda.produto}
+                        Cliente: ${venda.nomeComprador}
+                        Data de Vencimento: ${new Date(venda.dataVencimento).toLocaleDateString()}
+                        Serial: ${venda.numeroSerial || 'N/A'}
+                    `.trim()
+                };
+
+                await emailjs.send('service_lb5yt39', 'template_o0acrgq', templateParams, 'hOEhCYJwa_99mn944');
+            } catch (error) {
+                console.error('Erro ao enviar alerta:', error);
+            }
+        }
+    });
+}
+
+// Função para iniciar verificação de vencimentos
+function iniciarVerificacaoVencimentos() {
+    verificarVencimentos();
+    const agora = new Date();
+    const proximaMeiaNoite = new Date(agora);
+    proximaMeiaNoite.setHours(24, 0, 0, 0);
+    const msAteProximaVerificacao = proximaMeiaNoite - agora;
+
+    setTimeout(() => {
+        verificarVencimentos();
+        setInterval(verificarVencimentos, 24 * 60 * 60 * 1000);
+    }, msAteProximaVerificacao);
+}
+
+// Função para atualizar debug info
+function updateDebugInfo() {
+    const debugInfo = document.getElementById('debugInfo');
+    if (!debugInfo) return;
+    
+    const info = {
+        totalVendas: vendas.length,
+        tamanhoStorage: new Blob([JSON.stringify(vendas)]).size / 1024,
+        ultimaAtualizacao: new Date().toLocaleString()
+    };
+    
+    debugInfo.innerHTML = `
+        <div>Total de Vendas: ${info.totalVendas}</div>
+        <div>Tamanho do Storage: ${info.tamanhoStorage.toFixed(2)}KB</div>
+        <div>Última Atualização: ${info.ultimaAtualizacao}</div>
+    `;
+}
+
+// Função para atualizar tabela
+function atualizarTabela() {
+    const todasVendas = document.getElementById('todasVendas');
+    if (!todasVendas) return;
+    
+    todasVendas.innerHTML = '';
+    if (!vendas.length) return;
+
+    // Agrupar vendas por mês
+    const vendasPorMes = {};
+    vendas.sort((a, b) => new Date(b.dataCompra) - new Date(a.dataCompra))
+          .forEach(venda => {
+              const mesAno = venda.dataCompra.substring(0, 7);
+              if (!vendasPorMes[mesAno]) vendasPorMes[mesAno] = [];
+              vendasPorMes[mesAno].push(venda);
+          });
+
+    // Criar grupos de mês
+    Object.entries(vendasPorMes).forEach(([mesAno, vendasDoMes]) => {
+        const template = document.getElementById('templateGrupoMes');
+        if (!template) return;
+
+        const clone = template.content.cloneNode(true);
+        const mesAnoElement = clone.querySelector('.mes-ano');
+        const totalMes = clone.querySelector('.total-mes');
+        const tbody = clone.querySelector('.vendas-mes');
+
+        const [ano, mes] = mesAno.split('-');
+        const data = new Date(ano, mes - 1);
+        mesAnoElement.textContent = data.toLocaleDateString(idiomaAtual === 'he' ? 'he-IL' : 'pt-BR', {
+            month: 'long',
+            year: 'numeric'
+        });
+
+        const total = vendasDoMes.reduce((acc, venda) => acc + parseFloat(venda.lucro), 0);
+        totalMes.textContent = total.toFixed(2);
+
+        vendasDoMes.forEach(venda => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = gerarLinhaTabela(venda);
+            tbody.appendChild(tr);
+        });
+
+        todasVendas.appendChild(clone);
+    });
 }
