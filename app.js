@@ -10,11 +10,9 @@ const firebaseConfig = {
 
 // Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
-
-// Inicializar Firestore
 const db = firebase.firestore();
 
-// Teste de conexão com Firebase
+// Teste de conexão
 console.log('Testando conexão com Firebase...');
 db.collection('vendas').get()
     .then(snapshot => {
@@ -27,6 +25,58 @@ db.collection('vendas').get()
 
 // Array global para vendas
 let vendas = [];
+
+// Função para calcular data de vencimento
+function calcularDataVencimento() {
+    const dataCompra = document.getElementById('dataCompra').value;
+    const duracaoProduto = document.getElementById('duracaoProduto').value;
+    const duracaoPersonalizada = document.getElementById('duracaoPersonalizada');
+    const dataVencimento = document.getElementById('dataVencimento');
+    
+    if (!dataCompra || !duracaoProduto) {
+        dataVencimento.value = '';
+        return;
+    }
+
+    try {
+        const dataInicial = new Date(dataCompra);
+        const dataFinal = new Date(dataInicial);
+        dataFinal.setHours(12, 0, 0, 0);
+        
+        if (duracaoProduto === 'forever') {
+            dataFinal.setFullYear(2099, 11, 31);
+        } else if (duracaoProduto === 'custom') {
+            const meses = parseInt(duracaoPersonalizada.value) || 1;
+            const diaAtual = dataFinal.getDate();
+            dataFinal.setMonth(dataFinal.getMonth() + meses);
+            if (dataFinal.getDate() !== diaAtual) {
+                dataFinal.setDate(0);
+            }
+        } else {
+            const meses = parseInt(duracaoProduto);
+            const diaAtual = dataFinal.getDate();
+            dataFinal.setMonth(dataFinal.getMonth() + meses);
+            if (dataFinal.getDate() !== diaAtual) {
+                dataFinal.setDate(0);
+            }
+        }
+
+        const ano = dataFinal.getFullYear();
+        const mes = String(dataFinal.getMonth() + 1).padStart(2, '0');
+        const dia = String(dataFinal.getDate()).padStart(2, '0');
+        dataVencimento.value = `${ano}-${mes}-${dia}`;
+    } catch (error) {
+        console.error('Erro ao calcular data de vencimento:', error);
+        dataVencimento.value = '';
+    }
+}
+
+// Função para calcular lucro
+function calcularLucro() {
+    const venda = parseFloat(document.getElementById('precoVenda').value) || 0;
+    const custo = parseFloat(document.getElementById('precoCusto').value) || 0;
+    document.getElementById('lucro').value = (venda - custo).toFixed(2);
+}
 
 // Funções do Firebase
 async function carregarVendas() {
@@ -67,89 +117,6 @@ async function excluirVenda(id) {
     }
 }
 
-// Funções de email
-async function enviarEmailNovaVenda(venda) {
-    try {
-        const templateParams = {
-            to_email: 'davidmeirshrem@gmail.com',
-            to_name: String(venda.nomeComprador || ''),
-            from_name: 'Sistema de Vendas',
-            subject: 'Nova Venda Registrada',
-            message: `
-                Nova venda registrada com sucesso!
-
-                Produto: ${venda.produto}
-                Origem: ${venda.origemProduto || 'N/A'}
-                Serial: ${venda.numeroSerial || 'N/A'}
-                Data da Compra: ${new Date(venda.dataCompra).toLocaleDateString()}
-                Data de Vencimento: ${new Date(venda.dataVencimento).toLocaleDateString()}
-                Valor: ₪${venda.precoVenda}
-                Status: ${venda.statusPagamento}
-                Observações: ${venda.anotacoes || 'N/A'}
-            `.trim()
-        };
-
-        await emailjs.send(
-            'service_lb5yt39',
-            'template_o0acrgq',
-            templateParams,
-            'hOEhCYJwa_99mn944'
-        );
-    } catch (error) {
-        console.error('Erro ao enviar email de nova venda:', error);
-    }
-}
-
-// Função para verificar vencimentos
-async function verificarVencimentos() {
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-
-    vendas.forEach(async (venda) => {
-        const dataVencimento = new Date(venda.dataVencimento);
-        dataVencimento.setHours(0, 0, 0, 0);
-
-        const diffDias = Math.floor((dataVencimento - hoje) / (1000 * 60 * 60 * 24));
-
-        if (diffDias === 7 || diffDias === 0) {
-            try {
-                const templateParams = {
-                    to_email: 'davidmeirshrem@gmail.com',
-                    to_name: String(venda.nomeComprador || ''),
-                    from_name: 'Sistema de Vendas',
-                    subject: diffDias === 7 ? 'Alerta: Produto Próximo ao Vencimento' : 'Alerta: Produto Venceu Hoje',
-                    message: `
-                        ${diffDias === 7 ? 'ALERTA: Produto irá vencer em 7 dias!' : 'ALERTA: Produto venceu hoje!'}
-
-                        Produto: ${venda.produto}
-                        Cliente: ${venda.nomeComprador}
-                        Data de Vencimento: ${new Date(venda.dataVencimento).toLocaleDateString()}
-                        Serial: ${venda.numeroSerial || 'N/A'}
-                    `.trim()
-                };
-
-                await emailjs.send('service_lb5yt39', 'template_o0acrgq', templateParams, 'hOEhCYJwa_99mn944');
-            } catch (error) {
-                console.error('Erro ao enviar alerta:', error);
-            }
-        }
-    });
-}
-
-// Função para iniciar verificação de vencimentos
-function iniciarVerificacaoVencimentos() {
-    verificarVencimentos();
-    const agora = new Date();
-    const proximaMeiaNoite = new Date(agora);
-    proximaMeiaNoite.setHours(24, 0, 0, 0);
-    const msAteProximaVerificacao = proximaMeiaNoite - agora;
-
-    setTimeout(() => {
-        verificarVencimentos();
-        setInterval(verificarVencimentos, 24 * 60 * 60 * 1000);
-    }, msAteProximaVerificacao);
-}
-
 // Função para atualizar debug info
 function updateDebugInfo() {
     const debugInfo = document.getElementById('debugInfo');
@@ -176,7 +143,6 @@ function atualizarTabela() {
     todasVendas.innerHTML = '';
     if (!vendas.length) return;
 
-    // Agrupar vendas por mês
     const vendasPorMes = {};
     vendas.sort((a, b) => new Date(b.dataCompra) - new Date(a.dataCompra))
           .forEach(venda => {
@@ -185,7 +151,6 @@ function atualizarTabela() {
               vendasPorMes[mesAno].push(venda);
           });
 
-    // Criar grupos de mês
     Object.entries(vendasPorMes).forEach(([mesAno, vendasDoMes]) => {
         const template = document.getElementById('templateGrupoMes');
         if (!template) return;
@@ -214,3 +179,20 @@ function atualizarTabela() {
         todasVendas.appendChild(clone);
     });
 }
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Carregar vendas iniciais
+    carregarVendas();
+
+    // Adicionar event listeners para cálculos automáticos
+    document.getElementById('dataCompra').addEventListener('change', calcularDataVencimento);
+    document.getElementById('duracaoProduto').addEventListener('change', function() {
+        const duracaoPersonalizada = document.getElementById('duracaoPersonalizada');
+        duracaoPersonalizada.style.display = this.value === 'custom' ? 'block' : 'none';
+        calcularDataVencimento();
+    });
+    document.getElementById('duracaoPersonalizada').addEventListener('input', calcularDataVencimento);
+    document.getElementById('precoVenda').addEventListener('input', calcularLucro);
+    document.getElementById('precoCusto').addEventListener('input', calcularLucro);
+});
