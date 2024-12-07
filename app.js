@@ -98,7 +98,7 @@ async function carregarVendas() {
             });
         });
 
-        console.log('Vendas carregadas com sucesso:', vendas.length);
+        console.log('Vendas carregadas:', vendas.length);
         
         // Atualizar interface
         updateDebugInfo();
@@ -127,11 +127,14 @@ async function salvarVenda(venda) {
 }
 
 async function excluirVenda(id) {
+    if (!confirm('Tem certeza que deseja excluir esta venda?')) return;
+
     try {
         console.log('Excluindo venda:', id);
         await db.collection('vendas').doc(id).delete();
         console.log('Venda excluída com sucesso');
         await carregarVendas(); // Recarregar vendas após excluir
+        alert('Venda excluída com sucesso!');
         return true;
     } catch (error) {
         console.error('Erro ao excluir venda:', error);
@@ -341,14 +344,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (loadingModal) loadingModal.hide();
         }
     });
-
-    // Event listeners para os botões
-    document.getElementById('btnExportar')?.addEventListener('click', exportarParaExcel);
-    document.getElementById('btnBalanco')?.addEventListener('click', abrirBalanco);
-    document.getElementById('btnDebug')?.addEventListener('click', toggleDebug);
-    document.getElementById('btnLimpar')?.addEventListener('click', limparBancoDados);
-
-    console.log('Event listeners configurados');
 });
 
 // Funções auxiliares
@@ -388,6 +383,214 @@ async function comprimirImagem(base64Str) {
             resolve(canvas.toDataURL('image/jpeg', 0.7));
         };
     });
+}
+
+// Função para enviar email
+async function enviarEmailNovaVenda(venda) {
+    try {
+        const templateParams = {
+            to_email: 'davidmeirshrem@gmail.com',
+            to_name: String(venda.nomeComprador || ''),
+            from_name: 'Sistema de Vendas',
+            subject: 'Nova Venda Registrada',
+            message: `
+                Nova venda registrada com sucesso!
+
+                Produto: ${venda.produto}
+                Origem: ${venda.origemProduto || 'N/A'}
+                Serial: ${venda.numeroSerial || 'N/A'}
+                Data da Compra: ${new Date(venda.dataCompra).toLocaleDateString()}
+                Data de Vencimento: ${new Date(venda.dataVencimento).toLocaleDateString()}
+                Valor: ₪${venda.precoVenda}
+                Status: ${venda.statusPagamento}
+                Observações: ${venda.anotacoes || 'N/A'}
+            `.trim()
+        };
+
+        await emailjs.send(
+            'service_lb5yt39',
+            'template_o0acrgq',
+            templateParams,
+            'hOEhCYJwa_99mn944'
+        );
+    } catch (error) {
+        console.error('Erro ao enviar email:', error);
+    }
+}
+
+// Função para editar venda
+function editarVenda(id) {
+    const venda = vendas.find(v => v.id === id);
+    if (!venda) return;
+
+    // Preencher formulário
+    document.getElementById('nomeProduto').value = venda.produto;
+    document.getElementById('origemProduto').value = venda.origemProduto;
+    document.getElementById('numeroSerial').value = venda.numeroSerial || '';
+    document.getElementById('nomeComprador').value = venda.nomeComprador;
+    document.getElementById('emailComprador').value = venda.email || '';
+    document.getElementById('telefoneComprador').value = venda.telefoneComprador || '';
+    document.getElementById('dataCompra').value = venda.dataCompra;
+    document.getElementById('dataVencimento').value = venda.dataVencimento;
+    document.getElementById('precoCusto').value = venda.precoCusto || '';
+    document.getElementById('precoVenda').value = venda.precoVenda;
+    document.getElementById('lucro').value = venda.lucro;
+    document.getElementById('statusPagamento').value = venda.statusPagamento;
+    document.getElementById('anotacoes').value = venda.anotacoes || '';
+
+    // Excluir venda atual
+    excluirVenda(id);
+    
+    // Rolar até o formulário
+    document.getElementById('vendaForm').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Função para enviar email específico
+function enviarEmail(id) {
+    const venda = vendas.find(v => v.id === id);
+    if (!venda) return;
+
+    enviarEmailNovaVenda(venda)
+        .then(() => alert('Email enviado com sucesso!'))
+        .catch(error => {
+            console.error('Erro ao enviar email:', error);
+            alert('Erro ao enviar email');
+        });
+}
+
+// Função para abrir compartilhamento
+function abrirCompartilhar(id) {
+    const venda = vendas.find(v => v.id === id);
+    if (!venda) return;
+
+    const modal = new bootstrap.Modal(document.getElementById('compartilharModal'));
+    const compartilharBtns = document.querySelector('.compartilhar-btns');
+    if (compartilharBtns) {
+        compartilharBtns.dataset.vendaId = id;
+    }
+    modal.show();
+}
+
+// Função para compartilhar venda
+function compartilharVenda(tipo) {
+    const btns = document.querySelector('.compartilhar-btns');
+    const id = btns?.dataset.vendaId;
+    const venda = vendas.find(v => v.id === id);
+    if (!venda) return;
+
+    const texto = `
+        Produto: ${venda.produto}
+        Valor: ₪${venda.precoVenda}
+        Data: ${new Date(venda.dataCompra).toLocaleDateString()}
+        ${venda.numeroSerial ? `\nSerial: ${venda.numeroSerial}` : ''}
+        ${venda.anotacoes ? `\nAnotações: ${venda.anotacoes}` : ''}
+    `.trim();
+
+    if (tipo === 'whatsapp') {
+        window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`);
+    } else if (tipo === 'email') {
+        window.open(`mailto:?subject=Detalhes da Venda&body=${encodeURIComponent(texto)}`);
+    }
+
+    bootstrap.Modal.getInstance(document.getElementById('compartilharModal')).hide();
+}
+
+// Função para abrir configurações
+function abrirConfiguracoes() {
+    const modal = new bootstrap.Modal(document.getElementById('configModal'));
+    carregarProdutos();
+    modal.show();
+}
+
+// Função para carregar produtos
+function carregarProdutos() {
+    const listaProdutos = document.getElementById('listaProdutos');
+    if (!listaProdutos) return;
+    
+    listaProdutos.innerHTML = '';
+    const produtos = JSON.parse(localStorage.getItem('produtos') || '[]');
+    
+    produtos.forEach(produto => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+        li.innerHTML = `
+            ${produto}
+            <button class="btn btn-danger btn-sm" onclick="removerProduto('${produto}')">
+                <i class="bi bi-trash"></i>
+            </button>
+        `;
+        listaProdutos.appendChild(li);
+    });
+}
+
+// Função para adicionar produto
+function adicionarProduto() {
+    const novoProduto = document.getElementById('novoProduto');
+    const produto = novoProduto.value.trim();
+    
+    if (!produto) return;
+    
+    const produtos = JSON.parse(localStorage.getItem('produtos') || '[]');
+    if (!produtos.includes(produto)) {
+        produtos.push(produto);
+        localStorage.setItem('produtos', JSON.stringify(produtos));
+        carregarProdutos();
+        atualizarSelectProdutos();
+    }
+    
+    novoProduto.value = '';
+}
+
+// Função para remover produto
+function removerProduto(produto) {
+    let produtos = JSON.parse(localStorage.getItem('produtos') || '[]');
+    produtos = produtos.filter(p => p !== produto);
+    localStorage.setItem('produtos', JSON.stringify(produtos));
+    carregarProdutos();
+    atualizarSelectProdutos();
+}
+
+// Função para atualizar select de produtos
+function atualizarSelectProdutos() {
+    const select = document.getElementById('nomeProduto');
+    const produtosPersonalizados = JSON.parse(localStorage.getItem('produtos') || '[]');
+    
+    // Manter as opções padrão até o último optgroup
+    const optgroups = select.getElementsByTagName('optgroup');
+    const ultimoOptgroup = optgroups[optgroups.length - 1];
+    const indexUltimoOptgroup = Array.from(select.children).indexOf(ultimoOptgroup);
+    
+    // Remover opções personalizadas antigas
+    while (select.children.length > indexUltimoOptgroup + 2) {
+        select.removeChild(select.lastChild);
+    }
+    
+    // Adicionar novo optgroup para produtos personalizados
+    if (produtosPersonalizados.length > 0) {
+        const grupo = document.createElement('optgroup');
+        grupo.label = 'Produtos Personalizados';
+        
+        produtosPersonalizados.forEach(produto => {
+            const option = document.createElement('option');
+            option.value = produto;
+            option.textContent = produto;
+            grupo.appendChild(option);
+        });
+        
+        select.insertBefore(grupo, select.lastChild);
+    }
+}
+
+// Função para visualizar comprovante
+function visualizarComprovante(id) {
+    const venda = vendas.find(v => v.id === id);
+    if (!venda || !venda.comprovante) return;
+
+    const img = document.getElementById('comprovanteImg');
+    if (img) {
+        img.src = venda.comprovante;
+        new bootstrap.Modal(document.getElementById('comprovanteModal')).show();
+    }
 }
 
 // Função para exportar para Excel
@@ -487,39 +690,40 @@ function limparBancoDados() {
         })
         .catch(error => {
             console.error('Erro ao limpar banco:', error);
+            alert
+                        console.error('Erro ao limpar banco:', error);
             alert('Erro ao limpar banco de dados');
         });
 }
 
-// Função para enviar email
-async function enviarEmailNovaVenda(venda) {
-    try {
-        const templateParams = {
-            to_email: 'davidmeirshrem@gmail.com',
-            to_name: String(venda.nomeComprador || ''),
-            from_name: 'Sistema de Vendas',
-            subject: 'Nova Venda Registrada',
-            message: `
-                Nova venda registrada com sucesso!
+// Função para alternar idioma
+window.alternarIdioma = function() {
+    idiomaAtual = idiomaAtual === 'pt' ? 'he' : 'pt';
+    document.documentElement.setAttribute('dir', idiomaAtual === 'he' ? 'rtl' : 'ltr');
+    document.documentElement.setAttribute('lang', idiomaAtual);
+    traduzirInterface();
+    atualizarTabela();
+};
 
-                Produto: ${venda.produto}
-                Origem: ${venda.origemProduto || 'N/A'}
-                Serial: ${venda.numeroSerial || 'N/A'}
-                Data da Compra: ${new Date(venda.dataCompra).toLocaleDateString()}
-                Data de Vencimento: ${new Date(venda.dataVencimento).toLocaleDateString()}
-                Valor: ₪${venda.precoVenda}
-                Status: ${venda.statusPagamento}
-                Observações: ${venda.anotacoes || 'N/A'}
-            `.trim()
-        };
+// Função para traduzir interface
+function traduzirInterface() {
+    document.querySelectorAll('[data-translate]').forEach(elemento => {
+        const chave = elemento.getAttribute('data-translate');
+        if (traducoes[idiomaAtual][chave]) {
+            elemento.textContent = traducoes[idiomaAtual][chave];
+        }
+    });
 
-        await emailjs.send(
-            'service_lb5yt39',
-            'template_o0acrgq',
-            templateParams,
-            'hOEhCYJwa_99mn944'
-        );
-    } catch (error) {
-        console.error('Erro ao enviar email:', error);
-    }
+    document.querySelectorAll('[data-translate-placeholder]').forEach(elemento => {
+        const chave = elemento.getAttribute('data-translate-placeholder');
+        if (traducoes[idiomaAtual][chave]) {
+            elemento.placeholder = traducoes[idiomaAtual][chave];
+        }
+    });
 }
+
+// Inicialização
+document.addEventListener('DOMContentLoaded', function() {
+    carregarVendas();
+    traduzirInterface();
+});
