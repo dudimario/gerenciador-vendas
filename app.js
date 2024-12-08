@@ -16,6 +16,62 @@ const db = firebase.firestore();
 let vendas = [];
 let idiomaAtual = 'pt';
 
+// Sistema de tradução
+const traducoes = {
+    pt: {
+        titulo: "Gerenciador de Vendas de Assinaturas",
+        novaVenda: "Nova Venda",
+        produto: "Produto",
+        duracao: "Duração",
+        origem: "Origem do Produto",
+        nomeComprador: "Nome do Comprador",
+        email: "Email",
+        dataCompra: "Data da Compra",
+        dataVencimento: "Data de Vencimento",
+        precoCusto: "Preço de Custo",
+        precoVenda: "Preço de Venda",
+        lucro: "Lucro",
+        status: "Status",
+        pago: "Pago",
+        pendente: "Pendente",
+        anotacoes: "Anotações",
+        buscar: "Buscar",
+        exportar: "Exportar para Excel",
+        compartilhar: "Compartilhar",
+        atualizar: "Atualizar Venda",
+        emailEnviado: "Email enviado com sucesso!",
+        erroEmail: "Erro ao enviar email",
+        detalhesVenda: "Detalhes da Venda",
+        produtosPersonalizados: "Produtos Personalizados"
+    },
+    he: {
+        titulo: "מנהל מכירות מנויים",
+        novaVenda: "מכירה חדשה",
+        produto: "מוצר",
+        duracao: "תקופה",
+        origem: "מקור המוצר",
+        nomeComprador: "שם הקונה",
+        email: "אימייל",
+        dataCompra: "תאריך קנייה",
+        dataVencimento: "תאריך תפוגה",
+        precoCusto: "מחיר עלות",
+        precoVenda: "מחיר מכירה",
+        lucro: "רווח",
+        status: "סטטוס",
+        pago: "שולם",
+        pendente: "ממתין",
+        anotacoes: "הערות",
+        buscar: "חיפוש",
+        exportar: "ייצוא לאקסל",
+        compartilhar: "שיתוף",
+        atualizar: "עדכן מכירה",
+        emailEnviado: "האימייל נשלח בהצלחה!",
+        erroEmail: "שגיאה בשליחת האימייל",
+        detalhesVenda: "פרטי המכירה",
+        produtosPersonalizados: "מוצרים מותאמים אישית"
+    }
+};
+
 // Teste de conexão
 console.log('Testando conexão com Firebase...');
 db.collection('vendas').get()
@@ -28,7 +84,6 @@ db.collection('vendas').get()
         console.error('Erro na conexão com Firebase:', error);
         alert('Erro ao conectar com o banco de dados. Verifique sua conexão.');
     });
-
 // Função para calcular data de vencimento
 function calcularDataVencimento() {
     const dataCompra = document.getElementById('dataCompra').value;
@@ -79,13 +134,13 @@ function calcularDataVencimento() {
         dataVencimento.value = '';
     }
 }
+
 // Função para calcular lucro
 function calcularLucro() {
     const venda = parseFloat(document.getElementById('precoVenda').value) || 0;
     const custo = parseFloat(document.getElementById('precoCusto').value) || 0;
     document.getElementById('lucro').value = (venda - custo).toFixed(2);
 }
-
 // Funções do Firebase
 async function carregarVendas() {
     try {
@@ -151,112 +206,6 @@ async function excluirVenda(id, mostrarConfirmacao = true) {
         return false;
     }
 }
-
-// Função para enviar email de nova venda
-async function enviarEmailNovaVenda(venda) {
-    try {
-        const templateParams = {
-            to_email: 'davidmeirshrem@gmail.com',
-            to_name: String(venda.nomeComprador || ''),
-            from_name: 'Sistema de Vendas',
-            subject: 'Nova Venda Registrada',
-            message: `
-                Nova venda registrada com sucesso!
-
-                Produto: ${venda.produto}
-                Origem: ${venda.origemProduto || 'N/A'}
-                Serial: ${venda.numeroSerial || 'N/A'}
-                Data da Compra: ${new Date(venda.dataCompra).toLocaleDateString()}
-                Data de Vencimento: ${new Date(venda.dataVencimento).toLocaleDateString()}
-                Valor: ₪${venda.precoVenda}
-                Status: ${venda.statusPagamento}
-                Observações: ${venda.anotacoes || 'N/A'}
-            `.trim()
-        };
-
-        await emailjs.send(
-            'service_lb5yt39',
-            'template_o0acrgq',
-            templateParams,
-            'hOEhCYJwa_99mn944'
-        );
-        console.log('Email enviado com sucesso');
-    } catch (error) {
-        console.error('Erro ao enviar email:', error);
-    }
-}
-// Sistema de tradução
-const traducoes = {
-    pt: {
-        titulo: "Gerenciador de Vendas de Assinaturas",
-        novaVenda: "Nova Venda",
-        produto: "Produto",
-        duracao: "Duração",
-        origem: "Origem do Produto",
-        nomeComprador: "Nome do Comprador",
-        email: "Email",
-        dataCompra: "Data da Compra",
-        dataVencimento: "Data de Vencimento",
-        precoCusto: "Preço de Custo",
-        precoVenda: "Preço de Venda",
-        lucro: "Lucro",
-        status: "Status",
-        pago: "Pago",
-        pendente: "Pendente",
-        anotacoes: "Anotações",
-        buscar: "Buscar",
-        exportar: "Exportar para Excel",
-        compartilhar: "Compartilhar"
-    },
-    he: {
-        titulo: "מנהל מכירות מנויים",
-        novaVenda: "מכירה חדשה",
-        produto: "מוצר",
-        duracao: "תקופה",
-        origem: "מקור המוצר",
-        nomeComprador: "שם הקונה",
-        email: "אימייל",
-        dataCompra: "תאריך קנייה",
-        dataVencimento: "תאריך תפוגה",
-        precoCusto: "מחיר עלות",
-        precoVenda: "מחיר מכירה",
-        lucro: "רווח",
-        status: "סטטוס",
-        pago: "שולם",
-        pendente: "ממתין",
-        anotacoes: "הערות",
-        buscar: "חיפוש",
-        exportar: "ייצוא לאקסל",
-        compartilhar: "שיתוף"
-    }
-};
-
-// Função para alternar idioma
-function alternarIdioma() {
-    idiomaAtual = idiomaAtual === 'pt' ? 'he' : 'pt';
-    document.documentElement.setAttribute('dir', idiomaAtual === 'he' ? 'rtl' : 'ltr');
-    document.documentElement.setAttribute('lang', idiomaAtual);
-    traduzirInterface();
-    atualizarTabela();
-}
-
-// Função para traduzir interface
-function traduzirInterface() {
-    document.querySelectorAll('[data-translate]').forEach(elemento => {
-        const chave = elemento.getAttribute('data-translate');
-        if (traducoes[idiomaAtual][chave]) {
-            elemento.textContent = traducoes[idiomaAtual][chave];
-        }
-    });
-
-    document.querySelectorAll('[data-translate-placeholder]').forEach(elemento => {
-        const chave = elemento.getAttribute('data-translate-placeholder');
-        if (traducoes[idiomaAtual][chave]) {
-            elemento.placeholder = traducoes[idiomaAtual][chave];
-        }
-    });
-}
-
 // Função para gerar linha da tabela
 function gerarLinhaTabela(venda) {
     return `
@@ -393,45 +342,6 @@ function atualizarTabela() {
 
     console.log('Tabela atualizada com sucesso');
 }
-
-// Funções auxiliares
-async function toBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-    });
-}
-
-async function comprimirImagem(base64Str) {
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.src = base64Str;
-        img.onload = function() {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            let width = img.width;
-            let height = img.height;
-            const maxSize = 800;
-            
-            if (width > height && width > maxSize) {
-                height = height * (maxSize / width);
-                width = maxSize;
-            } else if (height > maxSize) {
-                width = width * (maxSize / height);
-                height = maxSize;
-            }
-            
-            canvas.width = width;
-            canvas.height = height;
-            
-            ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.7));
-        };
-    });
-}
 // Funções de ação
 function editarVenda(id) {
     const venda = vendas.find(v => v.id === id);
@@ -475,6 +385,41 @@ function enviarEmail(id) {
             console.error('Erro ao enviar email:', error);
             alert(traducoes[idiomaAtual].erroEmail || 'Erro ao enviar email');
         });
+}
+
+// Função para enviar email de nova venda
+async function enviarEmailNovaVenda(venda) {
+    try {
+        const templateParams = {
+            to_email: 'davidmeirshrem@gmail.com',
+            to_name: String(venda.nomeComprador || ''),
+            from_name: 'Sistema de Vendas',
+            subject: 'Nova Venda Registrada',
+            message: `
+                Nova venda registrada com sucesso!
+
+                Produto: ${venda.produto}
+                Origem: ${venda.origemProduto || 'N/A'}
+                Serial: ${venda.numeroSerial || 'N/A'}
+                Data da Compra: ${new Date(venda.dataCompra).toLocaleDateString()}
+                Data de Vencimento: ${new Date(venda.dataVencimento).toLocaleDateString()}
+                Valor: ₪${venda.precoVenda}
+                Status: ${venda.statusPagamento}
+                Observações: ${venda.anotacoes || 'N/A'}
+            `.trim()
+        };
+
+        await emailjs.send(
+            'service_lb5yt39',
+            'template_o0acrgq',
+            templateParams,
+            'hOEhCYJwa_99mn944'
+        );
+        console.log('Email enviado com sucesso');
+    } catch (error) {
+        console.error('Erro ao enviar email:', error);
+        throw error;
+    }
 }
 
 function abrirCompartilhar(id) {
@@ -735,6 +680,66 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('duracaoPersonalizada')?.addEventListener('input', calcularDataVencimento);
     document.getElementById('precoVenda')?.addEventListener('input', calcularLucro);
     document.getElementById('precoCusto')?.addEventListener('input', calcularLucro);
+
+    // Event listener do formulário
+    document.getElementById('vendaForm')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        try {
+            const loadingModalEl = document.getElementById('loadingModal');
+            const loadingModal = new bootstrap.Modal(loadingModalEl);
+            loadingModal.show();
+            
+            const venda = {
+                produto: document.getElementById('nomeProduto').value === 'Outro' ? 
+                         document.getElementById('outroNomeProduto').value : 
+                         document.getElementById('nomeProduto').value,
+                origemProduto: document.getElementById('origemProduto').value,
+                numeroSerial: document.getElementById('numeroSerial').value,
+                nomeComprador: document.getElementById('nomeComprador').value,
+                email: document.getElementById('emailComprador').value,
+                telefoneComprador: document.getElementById('telefoneComprador').value,
+                dataCompra: document.getElementById('dataCompra').value,
+                dataVencimento: document.getElementById('dataVencimento').value,
+                precoCusto: document.getElementById('precoCusto').value || '0',
+                precoVenda: document.getElementById('precoVenda').value,
+                lucro: document.getElementById('lucro').value,
+                statusPagamento: document.getElementById('statusPagamento').value,
+                anotacoes: document.getElementById('anotacoes').value,
+                dataCriacao: new Date().toISOString()
+            };
+
+            // Se estiver em modo edição, excluir venda antiga
+            if (this.dataset.editMode === 'true') {
+                await excluirVenda(this.dataset.editId, false);
+                delete this.dataset.editMode;
+                delete this.dataset.editId;
+            }
+
+            const comprovanteInput = document.getElementById('comprovante');
+            if (comprovanteInput.files.length > 0) {
+                const comprovante = await toBase64(comprovanteInput.files[0]);
+                venda.comprovante = await comprimirImagem(comprovante);
+            }
+
+            if (await salvarVenda(venda)) {
+                try {
+                    await enviarEmailNovaVenda(venda);
+                } catch (emailError) {
+                    console.error('Erro ao enviar email:', emailError);
+                }
+                this.reset();
+                alert('Venda salva com sucesso!');
+            }
+
+            loadingModal.hide();
+        } catch (error) {
+            console.error('Erro ao salvar venda:', error);
+            alert('Erro ao salvar venda: ' + error.message);
+            const loadingModal = bootstrap.Modal.getInstance(document.getElementById('loadingModal'));
+            if (loadingModal) loadingModal.hide();
+        }
+    });
 
     // Inicializar tradução
     traduzirInterface();
