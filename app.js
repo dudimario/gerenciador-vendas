@@ -185,6 +185,134 @@ async function enviarEmailNovaVenda(venda) {
         console.error('Erro ao enviar email:', error);
     }
 }
+// Sistema de tradução
+const traducoes = {
+    pt: {
+        titulo: "Gerenciador de Vendas de Assinaturas",
+        novaVenda: "Nova Venda",
+        produto: "Produto",
+        duracao: "Duração",
+        origem: "Origem do Produto",
+        nomeComprador: "Nome do Comprador",
+        email: "Email",
+        dataCompra: "Data da Compra",
+        dataVencimento: "Data de Vencimento",
+        precoCusto: "Preço de Custo",
+        precoVenda: "Preço de Venda",
+        lucro: "Lucro",
+        status: "Status",
+        pago: "Pago",
+        pendente: "Pendente",
+        anotacoes: "Anotações",
+        buscar: "Buscar",
+        exportar: "Exportar para Excel",
+        compartilhar: "Compartilhar"
+    },
+    he: {
+        titulo: "מנהל מכירות מנויים",
+        novaVenda: "מכירה חדשה",
+        produto: "מוצר",
+        duracao: "תקופה",
+        origem: "מקור המוצר",
+        nomeComprador: "שם הקונה",
+        email: "אימייל",
+        dataCompra: "תאריך קנייה",
+        dataVencimento: "תאריך תפוגה",
+        precoCusto: "מחיר עלות",
+        precoVenda: "מחיר מכירה",
+        lucro: "רווח",
+        status: "סטטוס",
+        pago: "שולם",
+        pendente: "ממתין",
+        anotacoes: "הערות",
+        buscar: "חיפוש",
+        exportar: "ייצוא לאקסל",
+        compartilhar: "שיתוף"
+    }
+};
+
+// Função para alternar idioma
+function alternarIdioma() {
+    idiomaAtual = idiomaAtual === 'pt' ? 'he' : 'pt';
+    document.documentElement.setAttribute('dir', idiomaAtual === 'he' ? 'rtl' : 'ltr');
+    document.documentElement.setAttribute('lang', idiomaAtual);
+    traduzirInterface();
+    atualizarTabela();
+}
+
+// Função para traduzir interface
+function traduzirInterface() {
+    document.querySelectorAll('[data-translate]').forEach(elemento => {
+        const chave = elemento.getAttribute('data-translate');
+        if (traducoes[idiomaAtual][chave]) {
+            elemento.textContent = traducoes[idiomaAtual][chave];
+        }
+    });
+
+    document.querySelectorAll('[data-translate-placeholder]').forEach(elemento => {
+        const chave = elemento.getAttribute('data-translate-placeholder');
+        if (traducoes[idiomaAtual][chave]) {
+            elemento.placeholder = traducoes[idiomaAtual][chave];
+        }
+    });
+}
+
+// Função para gerar linha da tabela
+function gerarLinhaTabela(venda) {
+    return `
+        <td>
+            <input type="checkbox" class="form-check-input selecao-venda" data-id="${venda.id}">
+        </td>
+        <td>
+            ${venda.produto}
+            ${venda.origemProduto ? `<br><small class="text-muted"><strong>Origem</strong>: ${venda.origemProduto}</small>` : ''}
+            ${venda.numeroSerial ? `<br><small class="text-muted"><strong>Serial</strong>: ${venda.numeroSerial}</small>` : ''}
+        </td>
+        <td>
+            ${venda.nomeComprador}
+            ${venda.email ? `<br><small class="text-muted"><i class="bi bi-envelope"></i> ${venda.email}</small>` : ''}
+            ${venda.telefoneComprador ? `<br><small class="text-muted"><i class="bi bi-telephone"></i> ${venda.telefoneComprador}</small>` : ''}
+        </td>
+        <td>${new Date(venda.dataCompra).toLocaleDateString()}</td>
+        <td>${new Date(venda.dataVencimento).toLocaleDateString()}</td>
+        <td>
+            ${venda.comprovante ? 
+                `<button class="btn btn-info btn-sm" onclick="visualizarComprovante('${venda.id}')">
+                    <i class="bi bi-image"></i> Ver
+                </button>` : 
+                'N/A'}
+        </td>
+        <td class="valor-custo currency">${venda.precoCusto ? parseFloat(venda.precoCusto).toFixed(2) : '0.00'}</td>
+        <td class="valor-venda currency">${parseFloat(venda.precoVenda).toFixed(2)}</td>
+        <td class="valor-lucro currency">${parseFloat(venda.lucro).toFixed(2)}</td>
+        <td>
+            <span class="badge ${venda.statusPagamento === 'pago' ? 'bg-success' : 'bg-warning'}">
+                ${venda.statusPagamento === 'pago' ? traducoes[idiomaAtual].pago : traducoes[idiomaAtual].pendente}
+            </span>
+            ${venda.anotacoes ? 
+                `<br><small class="text-muted anotacao-preview">
+                    <i class="bi bi-sticky"></i> ${venda.anotacoes}
+                </small>` : 
+                ''}
+        </td>
+        <td>
+            <div class="btn-group">
+                <button class="btn btn-primary btn-sm" onclick="editarVenda('${venda.id}')">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="excluirVenda('${venda.id}')">
+                    <i class="bi bi-trash"></i>
+                </button>
+                <button class="btn btn-success btn-sm" onclick="enviarEmail('${venda.id}')">
+                    <i class="bi bi-envelope"></i>
+                </button>
+                <button class="btn btn-info btn-sm" onclick="abrirCompartilhar('${venda.id}')">
+                    <i class="bi bi-share"></i>
+                </button>
+            </div>
+        </td>
+    `;
+}
 // Função para atualizar debug info
 function updateDebugInfo() {
     const debugInfo = document.getElementById('debugInfo');
