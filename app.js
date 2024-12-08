@@ -28,7 +28,8 @@ db.collection('vendas').get()
         console.error('Erro na conexão com Firebase:', error);
         alert('Erro ao conectar com o banco de dados. Verifique sua conexão.');
     });
-// Funções principais
+
+// Função para calcular data de vencimento
 function calcularDataVencimento() {
     const dataCompra = document.getElementById('dataCompra').value;
     const duracaoProduto = document.getElementById('duracaoProduto').value;
@@ -67,12 +68,18 @@ function calcularDataVencimento() {
         const mes = String(dataFinal.getMonth() + 1).padStart(2, '0');
         const dia = String(dataFinal.getDate()).padStart(2, '0');
         dataVencimento.value = `${ano}-${mes}-${dia}`;
+        
+        console.log('Data calculada:', {
+            dataCompra,
+            duracaoProduto,
+            dataVencimento: dataVencimento.value
+        });
     } catch (error) {
         console.error('Erro ao calcular data de vencimento:', error);
         dataVencimento.value = '';
     }
 }
-
+// Função para calcular lucro
 function calcularLucro() {
     const venda = parseFloat(document.getElementById('precoVenda').value) || 0;
     const custo = parseFloat(document.getElementById('precoCusto').value) || 0;
@@ -124,79 +131,60 @@ async function salvarVenda(venda) {
     }
 }
 
-async function excluirVenda(id) {
-    if (!confirm('Tem certeza que deseja excluir esta venda?')) return;
+async function excluirVenda(id, mostrarConfirmacao = true) {
+    if (mostrarConfirmacao && !confirm('Tem certeza que deseja excluir esta venda?')) return;
 
     try {
         console.log('Excluindo venda:', id);
         await db.collection('vendas').doc(id).delete();
         console.log('Venda excluída com sucesso');
         await carregarVendas(); // Recarregar vendas após excluir
-        alert('Venda excluída com sucesso!');
+        if (mostrarConfirmacao) {
+            alert('Venda excluída com sucesso!');
+        }
         return true;
     } catch (error) {
         console.error('Erro ao excluir venda:', error);
-        alert('Erro ao excluir venda: ' + error.message);
+        if (mostrarConfirmacao) {
+            alert('Erro ao excluir venda: ' + error.message);
+        }
         return false;
     }
 }
-// Função para gerar linha da tabela
-function gerarLinhaTabela(venda) {
-    return `
-        <td>
-            <input type="checkbox" class="form-check-input selecao-venda" data-id="${venda.id}">
-        </td>
-        <td>
-            ${venda.produto}
-            ${venda.origemProduto ? `<br><small class="text-muted"><strong>Origem</strong>: ${venda.origemProduto}</small>` : ''}
-            ${venda.numeroSerial ? `<br><small class="text-muted"><strong>Serial</strong>: ${venda.numeroSerial}</small>` : ''}
-        </td>
-        <td>
-            ${venda.nomeComprador}
-            ${venda.email ? `<br><small class="text-muted"><i class="bi bi-envelope"></i> ${venda.email}</small>` : ''}
-            ${venda.telefoneComprador ? `<br><small class="text-muted"><i class="bi bi-telephone"></i> ${venda.telefoneComprador}</small>` : ''}
-        </td>
-        <td>${new Date(venda.dataCompra).toLocaleDateString()}</td>
-        <td>${new Date(venda.dataVencimento).toLocaleDateString()}</td>
-        <td>
-            ${venda.comprovante ? 
-                `<button class="btn btn-info btn-sm" onclick="visualizarComprovante('${venda.id}')">
-                    <i class="bi bi-image"></i> Ver
-                </button>` : 
-                'N/A'}
-        </td>
-        <td class="valor-custo currency">${venda.precoCusto ? parseFloat(venda.precoCusto).toFixed(2) : '0.00'}</td>
-        <td class="valor-venda currency">${parseFloat(venda.precoVenda).toFixed(2)}</td>
-        <td class="valor-lucro currency">${parseFloat(venda.lucro).toFixed(2)}</td>
-        <td>
-            <span class="badge ${venda.statusPagamento === 'pago' ? 'bg-success' : 'bg-warning'}">
-                ${venda.statusPagamento === 'pago' ? 'Pago' : 'Pendente'}
-            </span>
-            ${venda.anotacoes ? 
-                `<br><small class="text-muted anotacao-preview">
-                    <i class="bi bi-sticky"></i> ${venda.anotacoes}
-                </small>` : 
-                ''}
-        </td>
-        <td>
-            <div class="btn-group">
-                <button class="btn btn-primary btn-sm" onclick="editarVenda('${venda.id}')">
-                    <i class="bi bi-pencil"></i>
-                </button>
-                <button class="btn btn-danger btn-sm" onclick="excluirVenda('${venda.id}')">
-                    <i class="bi bi-trash"></i>
-                </button>
-                <button class="btn btn-success btn-sm" onclick="enviarEmail('${venda.id}')">
-                    <i class="bi bi-envelope"></i>
-                </button>
-                <button class="btn btn-info btn-sm" onclick="abrirCompartilhar('${venda.id}')">
-                    <i class="bi bi-share"></i>
-                </button>
-            </div>
-        </td>
-    `;
-}
 
+// Função para enviar email de nova venda
+async function enviarEmailNovaVenda(venda) {
+    try {
+        const templateParams = {
+            to_email: 'davidmeirshrem@gmail.com',
+            to_name: String(venda.nomeComprador || ''),
+            from_name: 'Sistema de Vendas',
+            subject: 'Nova Venda Registrada',
+            message: `
+                Nova venda registrada com sucesso!
+
+                Produto: ${venda.produto}
+                Origem: ${venda.origemProduto || 'N/A'}
+                Serial: ${venda.numeroSerial || 'N/A'}
+                Data da Compra: ${new Date(venda.dataCompra).toLocaleDateString()}
+                Data de Vencimento: ${new Date(venda.dataVencimento).toLocaleDateString()}
+                Valor: ₪${venda.precoVenda}
+                Status: ${venda.statusPagamento}
+                Observações: ${venda.anotacoes || 'N/A'}
+            `.trim()
+        };
+
+        await emailjs.send(
+            'service_lb5yt39',
+            'template_o0acrgq',
+            templateParams,
+            'hOEhCYJwa_99mn944'
+        );
+        console.log('Email enviado com sucesso');
+    } catch (error) {
+        console.error('Erro ao enviar email:', error);
+    }
+}
 // Função para atualizar debug info
 function updateDebugInfo() {
     const debugInfo = document.getElementById('debugInfo');
@@ -214,6 +202,7 @@ function updateDebugInfo() {
         <div>Última Atualização: ${info.ultimaAtualizacao}</div>
     `;
 }
+
 // Função para atualizar tabela
 function atualizarTabela() {
     const todasVendas = document.getElementById('todasVendas');
@@ -277,70 +266,6 @@ function atualizarTabela() {
     console.log('Tabela atualizada com sucesso');
 }
 
-// Event listeners
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Inicializando aplicação...');
-
-    // Adicionar event listeners para cálculos automáticos
-    document.getElementById('dataCompra').addEventListener('change', calcularDataVencimento);
-    document.getElementById('duracaoProduto').addEventListener('change', function() {
-        const duracaoPersonalizada = document.getElementById('duracaoPersonalizada');
-        duracaoPersonalizada.style.display = this.value === 'custom' ? 'block' : 'none';
-        calcularDataVencimento();
-    });
-    document.getElementById('duracaoPersonalizada').addEventListener('input', calcularDataVencimento);
-    document.getElementById('precoVenda').addEventListener('input', calcularLucro);
-    document.getElementById('precoCusto').addEventListener('input', calcularLucro);
-
-    // Event listener do formulário
-    document.getElementById('vendaForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        try {
-            const loadingModalEl = document.getElementById('loadingModal');
-            const loadingModal = new bootstrap.Modal(loadingModalEl);
-            loadingModal.show();
-                        const venda = {
-                produto: document.getElementById('nomeProduto').value === 'Outro' ? 
-                         document.getElementById('outroNomeProduto').value : 
-                         document.getElementById('nomeProduto').value,
-                origemProduto: document.getElementById('origemProduto').value,
-                numeroSerial: document.getElementById('numeroSerial').value,
-                nomeComprador: document.getElementById('nomeComprador').value,
-                email: document.getElementById('emailComprador').value,
-                telefoneComprador: document.getElementById('telefoneComprador').value,
-                dataCompra: document.getElementById('dataCompra').value,
-                dataVencimento: document.getElementById('dataVencimento').value,
-                precoCusto: document.getElementById('precoCusto').value || '0',
-                precoVenda: document.getElementById('precoVenda').value,
-                lucro: document.getElementById('lucro').value,
-                statusPagamento: document.getElementById('statusPagamento').value,
-                anotacoes: document.getElementById('anotacoes').value,
-                dataCriacao: new Date().toISOString()
-            };
-
-            const comprovanteInput = document.getElementById('comprovante');
-            if (comprovanteInput.files.length > 0) {
-                const comprovante = await toBase64(comprovanteInput.files[0]);
-                venda.comprovante = await comprimirImagem(comprovante);
-            }
-
-            if (await salvarVenda(venda)) {
-                await enviarEmailNovaVenda(venda);
-                this.reset();
-                alert('Venda salva com sucesso!');
-            }
-
-            loadingModal.hide();
-        } catch (error) {
-            console.error('Erro ao salvar venda:', error);
-            alert('Erro ao salvar venda: ' + error.message);
-            const loadingModal = bootstrap.Modal.getInstance(document.getElementById('loadingModal'));
-            if (loadingModal) loadingModal.hide();
-        }
-    });
-});
-
 // Funções auxiliares
 async function toBase64(file) {
     return new Promise((resolve, reject) => {
@@ -399,11 +324,17 @@ function editarVenda(id) {
     document.getElementById('statusPagamento').value = venda.statusPagamento;
     document.getElementById('anotacoes').value = venda.anotacoes || '';
 
-    // Excluir venda atual
-    excluirVenda(id);
-    
     // Rolar até o formulário
     document.getElementById('vendaForm').scrollIntoView({ behavior: 'smooth' });
+
+    // Marcar formulário como modo edição
+    const form = document.getElementById('vendaForm');
+    form.dataset.editMode = 'true';
+    form.dataset.editId = id;
+
+    // Mudar texto do botão
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.textContent = traducoes[idiomaAtual].atualizar || 'Atualizar Venda';
 }
 
 function enviarEmail(id) {
@@ -411,10 +342,10 @@ function enviarEmail(id) {
     if (!venda) return;
 
     enviarEmailNovaVenda(venda)
-        .then(() => alert('Email enviado com sucesso!'))
+        .then(() => alert(traducoes[idiomaAtual].emailEnviado || 'Email enviado com sucesso!'))
         .catch(error => {
             console.error('Erro ao enviar email:', error);
-            alert('Erro ao enviar email');
+            alert(traducoes[idiomaAtual].erroEmail || 'Erro ao enviar email');
         });
 }
 
@@ -422,7 +353,11 @@ function abrirCompartilhar(id) {
     const venda = vendas.find(v => v.id === id);
     if (!venda) return;
 
-    const modal = new bootstrap.Modal(document.getElementById('compartilharModal'));
+    const modal = new bootstrap.Modal(document.getElementById('compartilharModal'), {
+        backdrop: true,
+        keyboard: true
+    });
+    
     const compartilharBtns = document.querySelector('.compartilhar-btns');
     if (compartilharBtns) {
         compartilharBtns.dataset.vendaId = id;
@@ -437,26 +372,48 @@ function compartilharVenda(tipo) {
     if (!venda) return;
 
     const texto = `
-        Produto: ${venda.produto}
-        Valor: ₪${venda.precoVenda}
-        Data: ${new Date(venda.dataCompra).toLocaleDateString()}
-        ${venda.numeroSerial ? `\nSerial: ${venda.numeroSerial}` : ''}
-        ${venda.anotacoes ? `\nAnotações: ${venda.anotacoes}` : ''}
+        ${traducoes[idiomaAtual].produto || 'Produto'}: ${venda.produto}
+        ${traducoes[idiomaAtual].valor || 'Valor'}: ₪${venda.precoVenda}
+        ${traducoes[idiomaAtual].data || 'Data'}: ${new Date(venda.dataCompra).toLocaleDateString()}
+        ${venda.numeroSerial ? `\n${traducoes[idiomaAtual].serial || 'Serial'}: ${venda.numeroSerial}` : ''}
+        ${venda.anotacoes ? `\n${traducoes[idiomaAtual].anotacoes || 'Anotações'}: ${venda.anotacoes}` : ''}
     `.trim();
 
     if (tipo === 'whatsapp') {
         window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`);
     } else if (tipo === 'email') {
-        window.open(`mailto:?subject=Detalhes da Venda&body=${encodeURIComponent(texto)}`);
+        window.open(`mailto:?subject=${encodeURIComponent(traducoes[idiomaAtual].detalhesVenda || 'Detalhes da Venda')}&body=${encodeURIComponent(texto)}`);
     }
 
     bootstrap.Modal.getInstance(document.getElementById('compartilharModal')).hide();
 }
+
+function visualizarComprovante(id) {
+    const venda = vendas.find(v => v.id === id);
+    if (!venda || !venda.comprovante) return;
+
+    const img = document.getElementById('comprovanteImg');
+    if (img) {
+        img.src = venda.comprovante;
+        new bootstrap.Modal(document.getElementById('comprovanteModal'), {
+            backdrop: true,
+            keyboard: true
+        }).show();
+    }
+}
 // Funções de configuração e balanço
 function abrirConfiguracoes() {
-    const modal = new bootstrap.Modal(document.getElementById('configModal'));
+    const configModalEl = document.getElementById('configModal');
+    if (!configModalEl) return;
+    
+    const configModal = new bootstrap.Modal(configModalEl, {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+    });
+    
     carregarProdutos();
-    modal.show();
+    configModal.show();
 }
 
 function carregarProdutos() {
@@ -521,7 +478,7 @@ function atualizarSelectProdutos() {
     // Adicionar novo optgroup para produtos personalizados
     if (produtosPersonalizados.length > 0) {
         const grupo = document.createElement('optgroup');
-        grupo.label = 'Produtos Personalizados';
+        grupo.label = traducoes[idiomaAtual].produtosPersonalizados || 'Produtos Personalizados';
         
         produtosPersonalizados.forEach(produto => {
             const option = document.createElement('option');
@@ -533,18 +490,38 @@ function atualizarSelectProdutos() {
         select.insertBefore(grupo, select.lastChild);
     }
 }
-// Funções de utilidade
-function visualizarComprovante(id) {
-    const venda = vendas.find(v => v.id === id);
-    if (!venda || !venda.comprovante) return;
 
-    const img = document.getElementById('comprovanteImg');
-    if (img) {
-        img.src = venda.comprovante;
-        new bootstrap.Modal(document.getElementById('comprovanteModal')).show();
-    }
+function abrirBalanco() {
+    const modal = new bootstrap.Modal(document.getElementById('balancoModal'), {
+        backdrop: true,
+        keyboard: true
+    });
+    
+    // Calcular totais
+    const totalVendas = vendas.length;
+    const custoTotal = vendas.reduce((acc, v) => acc + (parseFloat(v.precoCusto) || 0), 0);
+    const vendaTotal = vendas.reduce((acc, v) => acc + parseFloat(v.precoVenda), 0);
+    const lucroTotal = vendas.reduce((acc, v) => acc + parseFloat(v.lucro), 0);
+
+    // Status dos pagamentos
+    const vendasPagas = vendas.filter(v => v.statusPagamento === 'pago');
+    const vendasPendentes = vendas.filter(v => v.statusPagamento === 'pendente');
+    const valorPago = vendasPagas.reduce((acc, v) => acc + parseFloat(v.precoVenda), 0);
+    const valorPendente = vendasPendentes.reduce((acc, v) => acc + parseFloat(v.precoVenda), 0);
+
+    // Atualizar elementos
+    document.getElementById('balancoTotalVendas').textContent = totalVendas;
+    document.getElementById('balancoCustoTotal').textContent = custoTotal.toFixed(2);
+    document.getElementById('balancoVendaTotal').textContent = vendaTotal.toFixed(2);
+    document.getElementById('balancoLucroTotal').textContent = lucroTotal.toFixed(2);
+    document.getElementById('balancoVendasPagas').textContent = vendasPagas.length;
+    document.getElementById('balancoVendasPendentes').textContent = vendasPendentes.length;
+    document.getElementById('balancoValorPago').textContent = valorPago.toFixed(2);
+    document.getElementById('balancoValorPendente').textContent = valorPendente.toFixed(2);
+
+    modal.show();
 }
-
+// Funções de utilidade
 function exportarParaExcel() {
     try {
         const headers = [
@@ -587,34 +564,6 @@ function exportarParaExcel() {
     }
 }
 
-function abrirBalanco() {
-    const modal = new bootstrap.Modal(document.getElementById('balancoModal'));
-    
-    // Calcular totais
-    const totalVendas = vendas.length;
-    const custoTotal = vendas.reduce((acc, v) => acc + (parseFloat(v.precoCusto) || 0), 0);
-    const vendaTotal = vendas.reduce((acc, v) => acc + parseFloat(v.precoVenda), 0);
-    const lucroTotal = vendas.reduce((acc, v) => acc + parseFloat(v.lucro), 0);
-
-    // Status dos pagamentos
-    const vendasPagas = vendas.filter(v => v.statusPagamento === 'pago');
-    const vendasPendentes = vendas.filter(v => v.statusPagamento === 'pendente');
-    const valorPago = vendasPagas.reduce((acc, v) => acc + parseFloat(v.precoVenda), 0);
-    const valorPendente = vendasPendentes.reduce((acc, v) => acc + parseFloat(v.precoVenda), 0);
-
-    // Atualizar elementos
-    document.getElementById('balancoTotalVendas').textContent = totalVendas;
-    document.getElementById('balancoCustoTotal').textContent = custoTotal.toFixed(2);
-    document.getElementById('balancoVendaTotal').textContent = vendaTotal.toFixed(2);
-    document.getElementById('balancoLucroTotal').textContent = lucroTotal.toFixed(2);
-    document.getElementById('balancoVendasPagas').textContent = vendasPagas.length;
-    document.getElementById('balancoVendasPendentes').textContent = vendasPendentes.length;
-    document.getElementById('balancoValorPago').textContent = valorPago.toFixed(2);
-    document.getElementById('balancoValorPendente').textContent = valorPendente.toFixed(2);
-
-    modal.show();
-}
-
 function toggleDebug() {
     const debugInfo = document.getElementById('debugInfo');
     debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
@@ -642,7 +591,29 @@ function limparBancoDados() {
         });
 }
 
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Inicializando aplicação...');
+
+    // Event listeners para cálculos automáticos
+    document.getElementById('dataCompra')?.addEventListener('change', calcularDataVencimento);
+    document.getElementById('duracaoProduto')?.addEventListener('change', function() {
+        const duracaoPersonalizada = document.getElementById('duracaoPersonalizada');
+        if (duracaoPersonalizada) {
+            duracaoPersonalizada.style.display = this.value === 'custom' ? 'block' : 'none';
+        }
+        calcularDataVencimento();
+    });
+    document.getElementById('duracaoPersonalizada')?.addEventListener('input', calcularDataVencimento);
+    document.getElementById('precoVenda')?.addEventListener('input', calcularLucro);
+    document.getElementById('precoCusto')?.addEventListener('input', calcularLucro);
+
+    // Inicializar tradução
+    traduzirInterface();
+});
+
 // Tornar funções disponíveis globalmente
+window.alternarIdioma = alternarIdioma;
 window.toggleDebug = toggleDebug;
 window.abrirBalanco = abrirBalanco;
 window.abrirConfiguracoes = abrirConfiguracoes;
@@ -656,3 +627,4 @@ window.compartilharVenda = compartilharVenda;
 window.visualizarComprovante = visualizarComprovante;
 window.adicionarProduto = adicionarProduto;
 window.removerProduto = removerProduto;
+window.enviarEmailNovaVenda = enviarEmailNovaVenda;
