@@ -327,42 +327,78 @@
                 </form>
             </div>
         </div>
-        <!-- Buscador -->
-<div class="mb-4">
-    <div class="card">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <input type="text" 
-                           class="form-control" 
-                           id="buscador" 
-                           placeholder="Buscar por produto, nome, email...">
-                </div>
-                <div class="col-md-4">
-                    <select class="form-select" id="tipoBusca">
-                        <option value="todos">Todos os campos</option>
-                        <option value="produto">Produto</option>
-                        <option value="origem">Origem</option>
-                        <option value="serial">Número Serial/Conta</option>
-                        <option value="nome">Nome do Comprador</option>
-                        <option value="email">Email</option>
-                        <option value="data">Data</option>
-                        <option value="valor">Valor</option>
-                        <option value="status">Status do Pagamento</option>
-                        <option value="anotacoes">Anotações</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button class="btn btn-primary w-100" id="btnBuscar">
-                        <i class="bi bi-search"></i> Buscar
-                    </button>
+                <!-- Buscador -->
+        <div class="mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="buscador" 
+                                   placeholder="Buscar por produto, nome, email...">
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select" id="tipoBusca">
+                                <option value="todos">Todos os campos</option>
+                                <option value="produto">Produto</option>
+                                <option value="origem">Origem</option>
+                                <option value="serial">Número Serial/Conta</option>
+                                <option value="nome">Nome do Comprador</option>
+                                <option value="email">Email</option>
+                                <option value="data">Data</option>
+                                <option value="valor">Valor</option>
+                                <option value="status">Status do Pagamento</option>
+                                <option value="anotacoes">Anotações</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-primary w-100" id="btnBuscar">
+                                <i class="bi bi-search"></i> Buscar
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-        <!-- Botões de Ação -->
+        <!-- Resultados da Busca -->
+        <div id="resultadosBuscaContainer" style="display: none;" class="mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Resultados da Busca</h5>
+                    <span class="badge bg-primary">
+                        Encontrados: <span id="numResultados">0</span>
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <input type="checkbox" class="form-check-input" id="selecionarTodosResultados">
+                                    </th>
+                                    <th>Produto</th>
+                                    <th>Nome/Contato</th>
+                                    <th>Data Compra</th>
+                                    <th>Vencimento</th>
+                                    <th>Comprovante</th>
+                                    <th>Custo (₪)</th>
+                                    <th>Venda (₪)</th>
+                                    <th>Lucro (₪)</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultadosBusca">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+                <!-- Botões de Ação -->
         <div class="mb-4">
             <button class="btn btn-success" id="btnExportar" onclick="exportarParaExcel()">
                 <i class="bi bi-file-excel"></i> <span data-translate="exportar">Exportar para Excel</span>
@@ -384,7 +420,8 @@
                 <i class="bi bi-graph-up"></i> <span data-translate="balanco">Balanço</span>
             </button>
         </div>
-                <!-- Tabela de Todas as Vendas -->
+
+        <!-- Tabela de Todas as Vendas -->
         <div id="todasVendas">
             <!-- Os grupos de meses serão inseridos aqui dinamicamente -->
         </div>
