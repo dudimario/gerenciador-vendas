@@ -203,7 +203,7 @@
                                    data-translate-placeholder="digiteProduto" placeholder="Digite o nome do produto">
                             <div class="invalid-feedback" data-translate="produtoObrigatorio">Por favor, selecione um produto</div>
                         </div>
-                        <div class="col-md-4 mb-3">
+                                                <div class="col-md-4 mb-3">
                             <label class="form-label" data-translate="duracao">Duração</label>
                             <select class="form-control" id="duracaoProduto" required>
                                 <option value="" data-translate="selecioneDuracao">Selecione a duração</option>
@@ -226,7 +226,8 @@
                             <div class="invalid-feedback" data-translate="origemObrigatoria">Por favor, informe a origem do produto</div>
                         </div>
                     </div>
-                                        <!-- Segunda linha: Nome e Serial -->
+
+                    <!-- Segunda linha: Nome e Serial -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label" data-translate="nomeComprador">Nome do Comprador</label>
@@ -257,8 +258,7 @@
                             <div class="invalid-feedback" data-translate="telefoneInvalido">Por favor, informe um telefone válido</div>
                         </div>
                     </div>
-
-                    <!-- Quinta linha: Datas e Comprovante -->
+                                        <!-- Quinta linha: Datas e Comprovante -->
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label" data-translate="dataCompra">Data da Compra</label>
@@ -294,7 +294,7 @@
                         </div>
                     </div>
 
-                    <!-- Sétima linha: Status e Anotações -->
+                    <!-- Sétima linha: Status -->
                     <div class="row">
                         <div class="col-md-12 mb-3">
                             <label class="form-label" data-translate="statusPagamento">Status do Pagamento</label>
@@ -306,6 +306,7 @@
                         </div>
                     </div>
 
+                    <!-- Oitava linha: Anotações -->
                     <div class="row">
                         <div class="col-12 mb-3">
                             <label class="form-label" data-translate="anotacoes">Anotações</label>
@@ -345,33 +346,8 @@
                                 <option value="todos" data-translate="todosCampos">Todos os campos</option>
                                 <option value="produto" data-translate="produto">Produto</option>
                                 <option value="origem" data-translate="origem">Origem</option>
-                                <option value="serial" data-translate="numeroSerial">Número Serial/Conta</option>
-                                <option value="nome" data-translate="nomeComprador">Nome do Comprador</option>
-                                <option value="email" data-translate="email">Email</option>
-                                <option value="data" data-translate="data">Data</option>
-                                <option value="valor" data-translate="valor">Valor</option>
-                                <option value="status" data-translate="status">Status do Pagamento</option>
-                                <option value="anotacoes" data-translate="anotacoes">Anotações</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <input type="month" 
-                                   class="form-control" 
-                                   id="buscaPeriodo"
-                                   data-translate-title="buscarPeriodo"
-                                   title="Buscar por período">
-                        </div>
-                        <div class="col-md-2 mb-2">
-                            <button class="btn btn-primary w-100" id="btnBuscar">
-                                <i class="bi bi-search"></i> <span data-translate="buscar">Buscar</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Resultados da Busca -->
+                                <option value="serial" data-translate="numeroSerial">Número Serial/Conta
+                                            <!-- Resultados da Busca -->
         <div id="resultadosBuscaContainer" style="display: none;" class="mb-4 fade-in">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -410,23 +386,23 @@
 
         <!-- Botões de Ação -->
         <div class="mb-4">
-            <button class="btn btn-success" id="btnExportar">
+            <button class="btn btn-success" id="btnExportar" onclick="exportarParaExcel()">
                 <i class="bi bi-file-excel"></i> <span data-translate="exportar">Exportar para Excel</span>
             </button>
-            <button class="btn btn-danger ms-2" onclick="limparBancoDados()">
+            <button class="btn btn-danger ms-2" id="btnLimpar" onclick="limparBancoDados()">
                 <i class="bi bi-trash"></i> <span data-translate="limparBanco">Limpar Banco de Dados</span>
             </button>
-            <button class="btn btn-info ms-2" onclick="toggleDebug()">
+            <button class="btn btn-info ms-2" id="btnDebug" onclick="toggleDebug()">
                 <i class="bi bi-bug"></i> <span data-translate="debug">Debug Info</span>
             </button>
             <button class="btn btn-danger ms-2" id="excluirSelecionados" style="display: none;">
                 <i class="bi bi-trash"></i> <span data-translate="excluirSelecionados">Excluir Selecionados</span> 
                 (<span id="numSelecionados">0</span>)
             </button>
-            <button class="btn btn-secondary ms-2" onclick="abrirConfiguracoes()">
+            <button class="btn btn-secondary ms-2" id="btnConfig" onclick="abrirConfiguracoes()">
                 <i class="bi bi-gear"></i> <span data-translate="configuracoes">Configurações</span>
             </button>
-            <button class="btn btn-primary ms-2" onclick="abrirBalanco()">
+            <button class="btn btn-primary ms-2" id="btnBalanco" onclick="abrirBalanco()">
                 <i class="bi bi-graph-up"></i> <span data-translate="balanco">Balanço</span>
             </button>
         </div>
@@ -476,8 +452,7 @@
             </div>
         </template>
     </div>
-
-    <!-- Modal de Loading -->
+        <!-- Modal de Loading -->
     <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -531,7 +506,8 @@
             </div>
         </div>
     </div>
-        <!-- Modal de Visualização de Comprovante -->
+
+    <!-- Modal de Visualização de Comprovante -->
     <div class="modal fade" id="comprovanteModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -541,6 +517,39 @@
                 </div>
                 <div class="modal-body text-center">
                     <img id="comprovanteImg" src="" class="img-fluid" alt="Comprovante">
+                </div>
+            </div>
+        </div>
+    </div>
+        <!-- Modal de Configuração -->
+    <div class="modal fade" id="configModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" data-translate="configuracoes">Configurações</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <h6 data-translate="produtosPreDeterminados">Produtos Pré-determinados</h6>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <input type="text" class="form-control" id="novoProduto" 
+                                       data-translate-placeholder="digiteProduto" 
+                                       placeholder="Digite o nome do produto">
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-primary w-100" onclick="adicionarProduto()">
+                                    <i class="bi bi-plus-circle"></i> <span data-translate="adicionar">Adicionar</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <ul class="list-group" id="listaProdutos">
+                                <!-- Produtos serão inseridos aqui -->
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
