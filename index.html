@@ -327,62 +327,40 @@
                 </form>
             </div>
         </div>
-                <!-- Buscador -->
-        <div class="mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4 mb-2">
-                            <input type="text" 
-                                   class="form-control" 
-                                   id="buscador" 
-                                   list="sugestoes-busca"
-                                   data-translate-placeholder="buscar"
-                                   placeholder="Buscar por produto, nome, email...">
-                            <datalist id="sugestoes-busca"></datalist>
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <select class="form-select" id="tipoBusca">
-                                <option value="todos" data-translate="todosCampos">Todos os campos</option>
-                                <option value="produto" data-translate="produto">Produto</option>
-                                <option value="origem" data-translate="origem">Origem</option>
-                                <option value="serial" data-translate="numeroSerial">Número Serial/Conta
-                                            <!-- Resultados da Busca -->
-        <div id="resultadosBuscaContainer" style="display: none;" class="mb-4 fade-in">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0" data-translate="resultadosBusca">Resultados da Busca</h5>
-                    <span class="badge bg-primary">
-                        <span data-translate="encontrados">Encontrados</span>: <span id="numResultados">0</span>
-                    </span>
+        <!-- Buscador -->
+<div class="mb-4">
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <input type="text" 
+                           class="form-control" 
+                           id="buscador" 
+                           placeholder="Buscar por produto, nome, email...">
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>
-                                        <input type="checkbox" class="form-check-input" id="selecionarTodosResultados">
-                                    </th>
-                                    <th data-translate="produto">Produto</th>
-                                    <th data-translate="nomeComprador">Nome/Contato</th>
-                                    <th data-translate="dataCompra">Data Compra</th>
-                                    <th data-translate="dataVencimento">Vencimento</th>
-                                    <th data-translate="comprovante">Comprovante</th>
-                                    <th data-translate="custo">Custo (₪)</th>
-                                    <th data-translate="venda">Venda (₪)</th>
-                                    <th data-translate="lucro">Lucro (₪)</th>
-                                    <th data-translate="status">Status</th>
-                                    <th data-translate="acoes">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="resultadosBusca">
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="col-md-4">
+                    <select class="form-select" id="tipoBusca">
+                        <option value="todos">Todos os campos</option>
+                        <option value="produto">Produto</option>
+                        <option value="origem">Origem</option>
+                        <option value="serial">Número Serial/Conta</option>
+                        <option value="nome">Nome do Comprador</option>
+                        <option value="email">Email</option>
+                        <option value="data">Data</option>
+                        <option value="valor">Valor</option>
+                        <option value="status">Status do Pagamento</option>
+                        <option value="anotacoes">Anotações</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" id="btnBuscar">
+                        <i class="bi bi-search"></i> Buscar
+                    </button>
                 </div>
             </div>
         </div>
+    </div>
+</div>
 
         <!-- Botões de Ação -->
         <div class="mb-4">
