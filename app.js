@@ -28,8 +28,7 @@ db.collection('vendas').get()
         console.error('Erro na conexão com Firebase:', error);
         alert('Erro ao conectar com o banco de dados. Verifique sua conexão.');
     });
-
-// Função para calcular data de vencimento
+// Funções principais
 function calcularDataVencimento() {
     const dataCompra = document.getElementById('dataCompra').value;
     const duracaoProduto = document.getElementById('duracaoProduto').value;
@@ -74,7 +73,6 @@ function calcularDataVencimento() {
     }
 }
 
-// Função para calcular lucro
 function calcularLucro() {
     const venda = parseFloat(document.getElementById('precoVenda').value) || 0;
     const custo = parseFloat(document.getElementById('precoCusto').value) || 0;
@@ -142,7 +140,6 @@ async function excluirVenda(id) {
         return false;
     }
 }
-
 // Função para gerar linha da tabela
 function gerarLinhaTabela(venda) {
     return `
@@ -217,7 +214,6 @@ function updateDebugInfo() {
         <div>Última Atualização: ${info.ultimaAtualizacao}</div>
     `;
 }
-
 // Função para atualizar tabela
 function atualizarTabela() {
     const todasVendas = document.getElementById('todasVendas');
@@ -304,8 +300,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const loadingModalEl = document.getElementById('loadingModal');
             const loadingModal = new bootstrap.Modal(loadingModalEl);
             loadingModal.show();
-            
-            const venda = {
+                        const venda = {
                 produto: document.getElementById('nomeProduto').value === 'Outro' ? 
                          document.getElementById('outroNomeProduto').value : 
                          document.getElementById('nomeProduto').value,
@@ -384,41 +379,7 @@ async function comprimirImagem(base64Str) {
         };
     });
 }
-
-// Função para enviar email
-async function enviarEmailNovaVenda(venda) {
-    try {
-        const templateParams = {
-            to_email: 'davidmeirshrem@gmail.com',
-            to_name: String(venda.nomeComprador || ''),
-            from_name: 'Sistema de Vendas',
-            subject: 'Nova Venda Registrada',
-            message: `
-                Nova venda registrada com sucesso!
-
-                Produto: ${venda.produto}
-                Origem: ${venda.origemProduto || 'N/A'}
-                Serial: ${venda.numeroSerial || 'N/A'}
-                Data da Compra: ${new Date(venda.dataCompra).toLocaleDateString()}
-                Data de Vencimento: ${new Date(venda.dataVencimento).toLocaleDateString()}
-                Valor: ₪${venda.precoVenda}
-                Status: ${venda.statusPagamento}
-                Observações: ${venda.anotacoes || 'N/A'}
-            `.trim()
-        };
-
-        await emailjs.send(
-            'service_lb5yt39',
-            'template_o0acrgq',
-            templateParams,
-            'hOEhCYJwa_99mn944'
-        );
-    } catch (error) {
-        console.error('Erro ao enviar email:', error);
-    }
-}
-
-// Função para editar venda
+// Funções de ação
 function editarVenda(id) {
     const venda = vendas.find(v => v.id === id);
     if (!venda) return;
@@ -445,7 +406,6 @@ function editarVenda(id) {
     document.getElementById('vendaForm').scrollIntoView({ behavior: 'smooth' });
 }
 
-// Função para enviar email específico
 function enviarEmail(id) {
     const venda = vendas.find(v => v.id === id);
     if (!venda) return;
@@ -458,7 +418,6 @@ function enviarEmail(id) {
         });
 }
 
-// Função para abrir compartilhamento
 function abrirCompartilhar(id) {
     const venda = vendas.find(v => v.id === id);
     if (!venda) return;
@@ -471,7 +430,6 @@ function abrirCompartilhar(id) {
     modal.show();
 }
 
-// Função para compartilhar venda
 function compartilharVenda(tipo) {
     const btns = document.querySelector('.compartilhar-btns');
     const id = btns?.dataset.vendaId;
@@ -494,15 +452,13 @@ function compartilharVenda(tipo) {
 
     bootstrap.Modal.getInstance(document.getElementById('compartilharModal')).hide();
 }
-
-// Função para abrir configurações
+// Funções de configuração e balanço
 function abrirConfiguracoes() {
     const modal = new bootstrap.Modal(document.getElementById('configModal'));
     carregarProdutos();
     modal.show();
 }
 
-// Função para carregar produtos
 function carregarProdutos() {
     const listaProdutos = document.getElementById('listaProdutos');
     if (!listaProdutos) return;
@@ -523,7 +479,6 @@ function carregarProdutos() {
     });
 }
 
-// Função para adicionar produto
 function adicionarProduto() {
     const novoProduto = document.getElementById('novoProduto');
     const produto = novoProduto.value.trim();
@@ -541,7 +496,6 @@ function adicionarProduto() {
     novoProduto.value = '';
 }
 
-// Função para remover produto
 function removerProduto(produto) {
     let produtos = JSON.parse(localStorage.getItem('produtos') || '[]');
     produtos = produtos.filter(p => p !== produto);
@@ -550,7 +504,6 @@ function removerProduto(produto) {
     atualizarSelectProdutos();
 }
 
-// Função para atualizar select de produtos
 function atualizarSelectProdutos() {
     const select = document.getElementById('nomeProduto');
     const produtosPersonalizados = JSON.parse(localStorage.getItem('produtos') || '[]');
@@ -580,8 +533,7 @@ function atualizarSelectProdutos() {
         select.insertBefore(grupo, select.lastChild);
     }
 }
-
-// Função para visualizar comprovante
+// Funções de utilidade
 function visualizarComprovante(id) {
     const venda = vendas.find(v => v.id === id);
     if (!venda || !venda.comprovante) return;
@@ -593,7 +545,6 @@ function visualizarComprovante(id) {
     }
 }
 
-// Função para exportar para Excel
 function exportarParaExcel() {
     try {
         const headers = [
@@ -636,7 +587,6 @@ function exportarParaExcel() {
     }
 }
 
-// Função para abrir balanço
 function abrirBalanco() {
     const modal = new bootstrap.Modal(document.getElementById('balancoModal'));
     
@@ -665,14 +615,12 @@ function abrirBalanco() {
     modal.show();
 }
 
-// Função para toggle debug info
 function toggleDebug() {
     const debugInfo = document.getElementById('debugInfo');
     debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
     updateDebugInfo();
 }
 
-// Função para limpar banco de dados
 function limparBancoDados() {
     if (!confirm('Tem certeza que deseja limpar todo o banco de dados?')) return;
 
@@ -690,40 +638,21 @@ function limparBancoDados() {
         })
         .catch(error => {
             console.error('Erro ao limpar banco:', error);
-            alert
-                        console.error('Erro ao limpar banco:', error);
             alert('Erro ao limpar banco de dados');
         });
 }
 
-// Função para alternar idioma
-window.alternarIdioma = function() {
-    idiomaAtual = idiomaAtual === 'pt' ? 'he' : 'pt';
-    document.documentElement.setAttribute('dir', idiomaAtual === 'he' ? 'rtl' : 'ltr');
-    document.documentElement.setAttribute('lang', idiomaAtual);
-    traduzirInterface();
-    atualizarTabela();
-};
-
-// Função para traduzir interface
-function traduzirInterface() {
-    document.querySelectorAll('[data-translate]').forEach(elemento => {
-        const chave = elemento.getAttribute('data-translate');
-        if (traducoes[idiomaAtual][chave]) {
-            elemento.textContent = traducoes[idiomaAtual][chave];
-        }
-    });
-
-    document.querySelectorAll('[data-translate-placeholder]').forEach(elemento => {
-        const chave = elemento.getAttribute('data-translate-placeholder');
-        if (traducoes[idiomaAtual][chave]) {
-            elemento.placeholder = traducoes[idiomaAtual][chave];
-        }
-    });
-}
-
-// Inicialização
-document.addEventListener('DOMContentLoaded', function() {
-    carregarVendas();
-    traduzirInterface();
-});
+// Tornar funções disponíveis globalmente
+window.toggleDebug = toggleDebug;
+window.abrirBalanco = abrirBalanco;
+window.abrirConfiguracoes = abrirConfiguracoes;
+window.limparBancoDados = limparBancoDados;
+window.exportarParaExcel = exportarParaExcel;
+window.editarVenda = editarVenda;
+window.excluirVenda = excluirVenda;
+window.enviarEmail = enviarEmail;
+window.abrirCompartilhar = abrirCompartilhar;
+window.compartilharVenda = compartilharVenda;
+window.visualizarComprovante = visualizarComprovante;
+window.adicionarProduto = adicionarProduto;
+window.removerProduto = removerProduto;
