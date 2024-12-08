@@ -16,6 +16,166 @@ const db = firebase.firestore();
 let vendas = [];
 let idiomaAtual = 'pt';
 
+// Funções auxiliares
+async function toBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
+async function comprimirImagem(base64Str) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.src = base64Str;
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            let width = img.width;
+            let height = img.height;
+            const maxSize = 800;
+            
+            if (width > height && width > maxSize) {
+                height = height * (maxSize / width);
+                width = maxSize;
+            } else if (height > maxSize) {
+                width = width * (maxSize / height);
+                height = maxSize;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.7));
+        };
+    });
+}
+
+// Função para alternar idioma
+function alternarIdioma() {
+    idiomaAtual = idiomaAtual === 'pt' ? 'he' : 'pt';
+    document.documentElement.setAttribute('dir', idiomaAtual === 'he' ? 'rtl' : 'ltr');
+    document.documentElement.setAttribute('lang', idiomaAtual);
+    traduzirInterface();
+    atualizarTabela();
+}
+
+// Função para traduzir interface
+function traduzirInterface() {
+    document.querySelectorAll('[data-translate]').forEach(elemento => {
+        const chave = elemento.getAttribute('data-translate');
+        if (traducoes[idiomaAtual][chave]) {
+            elemento.textContent = traducoes[idiomaAtual][chave];
+        }
+    });
+
+    document.querySelectorAll('[data-translate-placeholder]').forEach(elemento => {
+        const chave = elemento.getAttribute('data-translate-placeholder');
+        if (traducoes[idiomaAtual][chave]) {
+            elemento.placeholder = traducoes[idiomaAtual][chave];
+        }
+    });
+}
+
+// Função para buscar
+function realizarBusca() {
+    const termo = document.getElementById('buscador').value.toLowerCase();
+    const tipo = document.getElementById('tipoBusca').value;
+    const resultadosContainer = document.getElementById('resultadosBuscaContainer');
+    const tabelaResultados = document.getElementById('resultadosBusca');
+    const numResultados = document.getElementById('numResultados');
+
+    if (!termo) {
+        resultadosContainer.style.display = 'none';
+        return;
+    }
+
+    const vendasFiltradas = vendas.filter(venda => {
+        if (!venda) return false;
+
+        try {
+            switch(tipo) {
+                case 'produto':
+                    return venda.produto.toLowerCase().includes(termo);
+                case 'origem':
+                    return venda.origemProduto.toLowerCase().includes(termo);
+                case 'serial':
+                    return venda.numeroSerial?.toLowerCase().includes(termo);
+                case 'nome':
+                    return venda.nomeComprador.toLowerCase().includes(termo);
+                case 'email':
+                    return venda.email?.toLowerCase().includes(termo);
+                case 'data':
+                    const dataCompra = new Date(venda.dataCompra).toLocaleDateString().toLowerCase();
+                    const dataVencimento = new Date(venda.dataVencimento).toLocaleDateString().toLowerCase();
+                    return dataCompra.includes(termo) || dataVencimento.includes(termo);
+                case 'valor':
+                    return venda.precoVenda.toString().includes(termo) || 
+                           venda.precoCusto?.toString().includes(termo) || 
+                           venda.lucro.toString().includes(termo);
+                case 'status':
+                    return venda.statusPagamento.toLowerCase().includes(termo);
+                case 'anotacoes':
+                    return venda.anotacoes?.toLowerCase().includes(termo);
+                default:
+                    return (
+                        venda.produto.toLowerCase().includes(termo) ||
+                        venda.origemProduto.toLowerCase().includes(termo) ||
+                        venda.numeroSerial?.toLowerCase().includes(termo) ||
+                        venda.nomeComprador.toLowerCase().includes(termo) ||
+                        venda.email?.toLowerCase().includes(termo) ||
+                        new Date(venda.dataCompra).toLocaleDateString().toLowerCase().includes(termo) ||
+                        new Date(venda.dataVencimento).toLocaleDateString().toLowerCase().includes(termo) ||
+                        venda.precoVenda.toString().includes(termo) ||
+                        venda.statusPagamento.toLowerCase().includes(termo) ||
+                        venda.anotacoes?.toLowerCase().includes(termo)
+                    );
+            }
+        } catch (error) {
+            console.error('Erro ao filtrar venda:', error);
+            return false;
+        }
+    });
+
+    // Atualizar resultados
+    tabelaResultados.innerHTML = '';
+    numResultados.textContent = vendasFiltradas.length;
+    resultadosContainer.style.display = 'block';
+
+    vendasFiltradas.forEach(venda => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = gerarLinhaTabela(venda);
+        tabelaResultados.appendChild(tr);
+    });
+}
+
+// Event listeners para busca
+document.addEventListener('DOMContentLoaded', function() {
+    const buscador = document.getElementById('buscador');
+    const btnBuscar = document.getElementById('btnBuscar');
+    const tipoBusca = document.getElementById('tipoBusca');
+
+    if (buscador) {
+        buscador.addEventListener('input', realizarBusca);
+        buscador.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                realizarBusca();
+            }
+        });
+    }
+
+    if (btnBuscar) {
+        btnBuscar.addEventListener('click', realizarBusca);
+    }
+
+    if (tipoBusca) {
+        tipoBusca.addEventListener('change', realizarBusca);
+    }
+});
 // Sistema de tradução
 const traducoes = {
     pt: {
