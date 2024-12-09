@@ -10,23 +10,61 @@
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
     
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- XLSX -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     
     <!-- EmailJS -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script>
+        (function() {
+            emailjs.init({
+                publicKey: "hOEhCYJwa_99mn944",
+                blockHeadless: false,
+                limitRate: true
+            });
+        })();
+    </script>
     
-    <!-- Nosso código -->
-    <script src="app.js" defer></script>
-
     <style>
         :root {
             --cor-lucro: #28a745;
             --cor-custo: #dc3545;
             --cor-venda: #0d6efd;
+            --cor-pendente: #ffc107;
+            --cor-background: #f8f9fa;
+            --cor-texto: #212529;
+            --cor-borda: #dee2e6;
         }
 
+        /* Estilos gerais */
+        body {
+            background-color: var(--cor-background);
+            color: var(--cor-texto);
+        }
+
+        .card {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid var(--cor-borda);
+        }
+
+        /* Estilos monetários */
         .currency::before {
             content: '₪';
             margin-right: 2px;
@@ -47,81 +85,80 @@
             font-weight: bold;
         }
 
+        /* Grupos de mês */
         .grupo-mes {
-            background-color: #f8f9fa;
-            padding: 15px;
-            margin: 20px 0;
+            background-color: white;
+            padding: 1.5rem;
+            margin: 1rem 0;
             border-radius: 8px;
-            border-left: 4px solid #0d6efd;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid var(--cor-venda);
+            transition: all 0.3s ease;
         }
 
-        .grupo-mes[dir="rtl"] {
+        .grupo-mes:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        [dir="rtl"] .grupo-mes {
             border-left: none;
-            border-right: 4px solid #0d6efd;
+            border-right: 4px solid var(--cor-venda);
         }
 
+        /* Elementos de texto */
         .anotacao-preview {
             max-height: 50px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            font-size: 0.85em;
+            color: #6c757d;
         }
 
+        /* Badges e status */
         .badge {
-            font-size: 0.9em;
-            padding: 5px 10px;
+            font-size: 0.85em;
+            padding: 0.4em 0.8em;
+            font-weight: 500;
         }
 
+        /* Debug info */
         .debug-info {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.9);
             color: white;
             padding: 15px;
             border-radius: 8px;
             font-size: 12px;
             z-index: 9999;
             display: none;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        /* Tabelas */
+        .table {
+            margin-bottom: 0;
         }
 
         .table th {
             white-space: nowrap;
-            background-color: #f8f9fa;
+            background-color: var(--cor-background);
+            font-weight: 600;
+            padding: 1rem;
         }
 
+        .table td {
+            vertical-align: middle;
+            padding: 1rem;
+        }
+
+        /* Botões */
         .btn-group-sm > .btn, .btn-sm {
-            padding: .25rem .5rem;
-            font-size: .875rem;
-            line-height: 1.5;
-            border-radius: .2rem;
-        }
-
-        .selecao-venda:checked + label {
-            background-color: #e9ecef;
-        }
-
-        .loading {
-            opacity: 0.5;
-            pointer-events: none;
-        }
-
-        .btn-idioma {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            z-index: 1000;
-        }
-
-        [dir="rtl"] .btn-idioma {
-            right: auto;
-            left: 10px;
-        }
-
-        .success-feedback, .error-feedback {
-            display: none;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            border-radius: 0.2rem;
         }
 
         .btn-whatsapp {
@@ -134,12 +171,60 @@
             color: white;
         }
 
-        .compartilhar-btns {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
+        /* Seleção */
+        .selecao-venda:checked + label {
+            background-color: var(--cor-background);
         }
 
+        /* Loading */
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        /* Botão de idioma */
+        .btn-idioma {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+        }
+
+        [dir="rtl"] .btn-idioma {
+            right: auto;
+            left: 20px;
+        }
+
+        /* Feedback */
+        .success-feedback, .error-feedback {
+            display: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            margin-left: 1rem;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .success-feedback {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: var(--cor-lucro);
+        }
+
+        .error-feedback {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: var(--cor-custo);
+        }
+
+        /* Gráficos */
+        .grafico-container {
+            position: relative;
+            height: 300px;
+            margin: 1rem 0;
+        }
+
+        /* Animações */
         .fade-in {
             animation: fadeIn 0.3s ease-in;
         }
@@ -147,6 +232,67 @@
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
+        }
+
+        /* Notificações */
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: var(--cor-custo);
+            color: white;
+            border-radius: 50%;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            .card {
+                margin-bottom: 1rem;
+            }
+
+            .table-responsive {
+                font-size: 0.85rem;
+            }
+
+            .btn-sm {
+                padding: 0.2rem 0.4rem;
+                font-size: 0.75rem;
+            }
+
+            .grupo-mes {
+                padding: 1rem;
+            }
+
+            .grafico-container {
+                height: 200px;
+            }
+        }
+
+        /* Temas escuro/claro */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --cor-background: #212529;
+                --cor-texto: #f8f9fa;
+                --cor-borda: #495057;
+            }
+
+            .card {
+                background-color: #343a40;
+            }
+
+            .card-header {
+                background-color: #343a40;
+            }
+
+            .table th {
+                background-color: #343a40;
+            }
         }
     </style>
 </head>
@@ -159,8 +305,85 @@
     <!-- Debug Info -->
     <div id="debugInfo" class="debug-info"></div>
 
+    <!-- Container Principal -->
     <div class="container mt-4">
         <h1 class="text-center mb-4" data-translate="titulo">Gerenciador de Vendas de Assinaturas</h1>
+
+        <!-- Dashboard -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0" data-translate="dashboard">Dashboard</h5>
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary btn-sm" onclick="atualizarDashboard('dia')">Dia</button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="atualizarDashboard('semana')">Semana</button>
+                    <button class="btn btn-outline-primary btn-sm active" onclick="atualizarDashboard('mes')">Mês</button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="atualizarDashboard('ano')">Ano</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Cards de Estatísticas -->
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-primary text-white h-100">
+                            <div class="card-body">
+                                <h6 class="card-title" data-translate="totalVendas">Total de Vendas</h6>
+                                <h2 class="card-text" id="dashTotalVendas">0</h2>
+                                <small id="dashVendasComparativo">+0% vs período anterior</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-success text-white h-100">
+                            <div class="card-body">
+                                <h6 class="card-title" data-translate="lucroTotal">Lucro Total</h6>
+                                <h2 class="card-text currency" id="dashLucroTotal">0.00</h2>
+                                <small id="dashLucroComparativo">+0% vs período anterior</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-warning text-dark h-100">
+                            <div class="card-body">
+                                <h6 class="card-title" data-translate="vendasPendentes">Vendas Pendentes</h6>
+                                <h2 class="card-text" id="dashVendasPendentes">0</h2>
+                                <small id="dashPendentesComparativo">0 novas pendências</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-info text-white h-100">
+                            <div class="card-body">
+                                <h6 class="card-title" data-translate="vencimentosProximos">Vencimentos Próximos</h6>
+                                <h2 class="card-text" id="dashVencimentosProximos">0</h2>
+                                <small id="dashVencimentosComparativo">nos próximos 7 dias</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráficos -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title" data-translate="graficoVendas">Vendas por Período</h6>
+                                <div class="grafico-container">
+                                    <canvas id="graficoVendas"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title" data-translate="graficoLucros">Lucros por Período</h6>
+                                <div class="grafico-container">
+                                    <canvas id="graficoLucros"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Formulário de Cadastro -->
         <div class="card mb-4">
@@ -168,193 +391,52 @@
                 <h4 data-translate="novaVenda">Nova Venda</h4>
             </div>
             <div class="card-body">
-                <form id="vendaForm" novalidate>
-                    <!-- Primeira linha: Produto, Duração, Origem -->
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label" data-translate="produto">Nome do Produto</label>
-                            <select class="form-control" id="nomeProduto" required>
-                                <option value="" data-translate="selecioneProduto">Selecione um produto</option>
-                                <optgroup label="Streaming">
-                                    <option value="Netflix">Netflix</option>
-                                    <option value="Disney+">Disney+</option>
-                                    <option value="HBO Max">HBO Max</option>
-                                    <option value="Amazon Prime">Amazon Prime</option>
-                                    <option value="Apple TV+">Apple TV+</option>
-                                    <option value="Paramount+">Paramount+</option>
-                                    <option value="Star+">Star+</option>
-                                    <option value="Discovery+">Discovery+</option>
-                                </optgroup>
-                                <optgroup label="Música">
-                                    <option value="Spotify">Spotify</option>
-                                    <option value="YouTube Premium">YouTube Premium</option>
-                                    <option value="Deezer">Deezer</option>
-                                    <option value="Apple Music">Apple Music</option>
-                                    <option value="Amazon Music">Amazon Music</option>
-                                </optgroup>
-                                <optgroup label="VPN">
-                                    <option value="NordVPN">NordVPN</option>
-                                    <option value="ExpressVPN">ExpressVPN</option>
-                                    <option value="CyberGhost">CyberGhost</option>
-                                </optgroup>
-                                <option value="Outro" data-translate="outro">Outro...</option>
-                            </select>
-                            <input type="text" class="form-control mt-2" id="outroNomeProduto" style="display: none;" 
-                                   data-translate-placeholder="digiteProduto" placeholder="Digite o nome do produto">
-                            <div class="invalid-feedback" data-translate="produtoObrigatorio">Por favor, selecione um produto</div>
-                        </div>
-                                                <div class="col-md-4 mb-3">
-                            <label class="form-label" data-translate="duracao">Duração</label>
-                            <select class="form-control" id="duracaoProduto" required>
-                                <option value="" data-translate="selecioneDuracao">Selecione a duração</option>
-                                <option value="1" data-translate="umMes">1 mês</option>
-                                <option value="3" data-translate="tresMeses">3 meses</option>
-                                <option value="6" data-translate="seisMeses">6 meses</option>
-                                <option value="12" data-translate="umAno">1 ano</option>
-                                <option value="24" data-translate="doisAnos">2 anos</option>
-                                <option value="36" data-translate="tresAnos">3 anos</option>
-                                <option value="forever" data-translate="paraSempre">Para sempre</option>
-                                <option value="custom" data-translate="personalizado">Personalizado...</option>
-                            </select>
-                            <input type="number" class="form-control mt-2" id="duracaoPersonalizada" style="display: none;" 
-                                   min="1" max="60" data-translate-placeholder="digiteMeses" placeholder="Digite o número de meses">
-                            <div class="invalid-feedback" data-translate="duracaoObrigatoria">Por favor, selecione a duração</div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label" data-translate="origem">Origem do Produto</label>
-                            <input type="text" class="form-control" id="origemProduto" required>
-                            <div class="invalid-feedback" data-translate="origemObrigatoria">Por favor, informe a origem do produto</div>
-                        </div>
-                    </div>
-
-                    <!-- Segunda linha: Nome e Serial -->
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label" data-translate="nomeComprador">Nome do Comprador</label>
-                            <input type="text" class="form-control" id="nomeComprador" required>
-                            <div class="invalid-feedback" data-translate="nomeObrigatorio">Por favor, informe o nome do comprador</div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label" data-translate="numeroSerial">Número Serial/Conta (opcional)</label>
-                            <input type="text" class="form-control" id="numeroSerial">
-                        </div>
-                    </div>
-
-                    <!-- Terceira linha: Email -->
-                    <div class="row">
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label" data-translate="emailComprador">Email do Comprador (opcional)</label>
-                            <input type="email" class="form-control" id="emailComprador">
-                            <div class="invalid-feedback" data-translate="emailInvalido">Por favor, informe um email válido</div>
-                        </div>
-                    </div>
-
-                    <!-- Quarta linha: Telefone -->
-                    <div class="row">
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label" data-translate="telefoneComprador">Telefone do Comprador (opcional)</label>
-                            <input type="tel" class="form-control" id="telefoneComprador" 
-                                   placeholder="+972 XX-XXX-XXXX">
-                            <div class="invalid-feedback" data-translate="telefoneInvalido">Por favor, informe um telefone válido</div>
-                        </div>
-                    </div>
-                                        <!-- Quinta linha: Datas e Comprovante -->
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label" data-translate="dataCompra">Data da Compra</label>
-                            <input type="date" class="form-control" id="dataCompra" required>
-                            <div class="invalid-feedback" data-translate="dataObrigatoria">Por favor, selecione a data da compra</div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label" data-translate="dataVencimento">Data de Vencimento</label>
-                            <input type="date" class="form-control" id="dataVencimento" required readonly>
-                            <div class="invalid-feedback" data-translate="dataObrigatoria">Por favor, selecione a data de vencimento</div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label" data-translate="comprovante">Comprovante</label>
-                            <input type="file" class="form-control" id="comprovante" accept="image/*">
-                            <div class="invalid-feedback" data-translate="arquivoGrande">Arquivo muito grande ou formato inválido</div>
-                        </div>
-                    </div>
-
-                    <!-- Sexta linha: Valores -->
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label" data-translate="precoCusto">Preço de Custo (₪) (opcional)</label>
-                            <input type="number" class="form-control" id="precoCusto" min="0" step="0.01">
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label" data-translate="precoVenda">Preço de Venda (₪)</label>
-                            <input type="number" class="form-control" id="precoVenda" required min="0" step="0.01">
-                            <div class="invalid-feedback" data-translate="precoObrigatorio">Por favor, informe o preço de venda</div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label" data-translate="lucro">Lucro (₪)</label>
-                            <input type="number" class="form-control" id="lucro" readonly>
-                        </div>
-                    </div>
-
-                    <!-- Sétima linha: Status -->
-                    <div class="row">
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label" data-translate="statusPagamento">Status do Pagamento</label>
-                            <select class="form-control" id="statusPagamento" required>
-                                <option value="pago" data-translate="pago">Pago</option>
-                                <option value="pendente" data-translate="pendente">Pendente</option>
-                            </select>
-                            <div class="invalid-feedback" data-translate="statusObrigatorio">Por favor, selecione o status do pagamento</div>
-                        </div>
-                    </div>
-
-                    <!-- Oitava linha: Anotações -->
-                    <div class="row">
-                        <div class="col-12 mb-3">
-                            <label class="form-label" data-translate="anotacoes">Anotações</label>
-                            <textarea class="form-control" id="anotacoes" rows="3"></textarea>
-                        </div>
-                    </div>
-
-                    <!-- Botão de Salvar -->
-                    <div class="d-flex align-items-center">
-                        <button type="submit" class="btn btn-primary" data-translate="salvar">Salvar Venda</button>
-                        <span class="success-feedback ms-2">
-                            <i class="bi bi-check-circle"></i> <span data-translate="vendaSalva">Venda salva com sucesso!</span>
-                        </span>
-                        <span class="error-feedback ms-2">
-                            <i class="bi bi-exclamation-circle"></i> <span data-translate="erroSalvar">Erro ao salvar venda</span>
-                        </span>
-                    </div>
-                </form>
+                <!-- Seu formulário existente aqui -->
             </div>
         </div>
-                <!-- Buscador -->
-        <div class="mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <input type="text" 
-                                   class="form-control" 
-                                   id="buscador" 
-                                   placeholder="Buscar por produto, nome, email...">
-                        </div>
-                        <div class="col-md-4">
-                            <select class="form-select" id="tipoBusca">
-                                <option value="todos">Todos os campos</option>
-                                <option value="produto">Produto</option>
-                                <option value="origem">Origem</option>
-                                <option value="serial">Número Serial/Conta</option>
-                                <option value="nome">Nome do Comprador</option>
-                                <option value="email">Email</option>
-                                <option value="data">Data</option>
-                                <option value="valor">Valor</option>
-                                <option value="status">Status do Pagamento</option>
-                                <option value="anotacoes">Anotações</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <button class="btn btn-primary w-100" id="btnBuscar">
-                                <i class="bi bi-search"></i> Buscar
+
+        <!-- Buscador Avançado -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0" data-translate="buscaAvancada">Busca Avançada</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <input type="text" 
+                               class="form-control" 
+                               id="buscador" 
+                               data-translate-placeholder="buscarPor"
+                               placeholder="Buscar por...">
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <select class="form-select" id="tipoBusca">
+                            <option value="todos" data-translate="todosCampos">Todos os campos</option>
+                            <option value="produto" data-translate="produto">Produto</option>
+                            <option value="origem" data-translate="origem">Origem</option>
+                            <option value="serial" data-translate="serial">Serial</option>
+                            <option value="nome" data-translate="nome">Nome</option>
+                            <option value="email" data-translate="email">Email</option>
+                            <option value="data" data-translate="data">Data</option>
+                            <option value="valor" data-translate="valor">Valor</option>
+                            <option value="status" data-translate="status">Status</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <input type="date" class="form-control" id="dataInicio" 
+                               data-translate-placeholder="dataInicio" placeholder="Data Início">
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <input type="date" class="form-control" id="dataFim" 
+                               data-translate-placeholder="dataFim" placeholder="Data Fim">
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <div class="btn-group w-100">
+                            <button class="btn btn-primary" id="btnBuscar">
+                                <i class="bi bi-search"></i> <span data-translate="buscar">Buscar</span>
+                            </button>
+                            <button class="btn btn-outline-secondary" id="btnLimparBusca">
+                                <i class="bi bi-x-circle"></i> <span data-translate="limpar">Limpar</span>
                             </button>
                         </div>
                     </div>
@@ -364,110 +446,69 @@
 
         <!-- Resultados da Busca -->
         <div id="resultadosBuscaContainer" style="display: none;" class="mb-4">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Resultados da Busca</h5>
-                    <span class="badge bg-primary">
-                        Encontrados: <span id="numResultados">0</span>
-                    </span>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>
-                                        <input type="checkbox" class="form-check-input" id="selecionarTodosResultados">
-                                    </th>
-                                    <th>Produto</th>
-                                    <th>Nome/Contato</th>
-                                    <th>Data Compra</th>
-                                    <th>Vencimento</th>
-                                    <th>Comprovante</th>
-                                    <th>Custo (₪)</th>
-                                    <th>Venda (₪)</th>
-                                    <th>Lucro (₪)</th>
-                                    <th>Status</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="resultadosBusca">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+            <!-- Conteúdo dos resultados aqui -->
         </div>
-                <!-- Botões de Ação -->
+
+        <!-- Botões de Ação -->
         <div class="mb-4">
-            <button class="btn btn-success" id="btnExportar" onclick="exportarParaExcel()">
-                <i class="bi bi-file-excel"></i> <span data-translate="exportar">Exportar para Excel</span>
-            </button>
-            <button class="btn btn-danger ms-2" id="btnLimpar" onclick="limparBancoDados()">
-                <i class="bi bi-trash"></i> <span data-translate="limparBanco">Limpar Banco de Dados</span>
-            </button>
-            <button class="btn btn-info ms-2" id="btnDebug" onclick="toggleDebug()">
-                <i class="bi bi-bug"></i> <span data-translate="debug">Debug Info</span>
-            </button>
-            <button class="btn btn-danger ms-2" id="excluirSelecionados" style="display: none;">
-                <i class="bi bi-trash"></i> <span data-translate="excluirSelecionados">Excluir Selecionados</span> 
-                (<span id="numSelecionados">0</span>)
-            </button>
-            <button class="btn btn-secondary ms-2" id="btnConfig" onclick="abrirConfiguracoes()">
-                <i class="bi bi-gear"></i> <span data-translate="configuracoes">Configurações</span>
-            </button>
-            <button class="btn btn-primary ms-2" id="btnBalanco" onclick="abrirBalanco()">
+            <div class="btn-group">
+                <button class="btn btn-success" id="btnExportar" onclick="exportarDados()">
+                    <i class="bi bi-file-earmark-spreadsheet"></i> <span data-translate="exportar">Exportar</span>
+                </button>
+                <button class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                    <span class="visually-hidden">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="exportarDados('excel')">Excel</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportarDados('pdf')">PDF</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportarDados('csv')">CSV</a></li>
+                </ul>
+            </div>
+
+            <button class="btn btn-primary ms-2" onclick="abrirBalanco()">
                 <i class="bi bi-graph-up"></i> <span data-translate="balanco">Balanço</span>
             </button>
-        </div>
 
-        <!-- Tabela de Todas as Vendas -->
-        <div id="todasVendas">
-            <!-- Os grupos de meses serão inseridos aqui dinamicamente -->
-        </div>
+            <button class="btn btn-info ms-2" onclick="abrirRelatorios()">
+                <i class="bi bi-file-text"></i> <span data-translate="relatorios">Relatórios</span>
+            </button>
 
-        <!-- Template para Grupo de Mês -->
-        <template id="templateGrupoMes">
-            <div class="grupo-mes mb-4">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <span class="mes-ano"></span>
-                            <span class="badge bg-secondary ms-2">
-                                <span data-translate="total">Total</span>: <span class="total-mes">0</span>
-                            </span>
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>
-                                            <input type="checkbox" class="form-check-input selecionar-mes">
-                                        </th>
-                                        <th data-translate="produto">Produto</th>
-                                        <th data-translate="nomeComprador">Nome/Contato</th>
-                                        <th data-translate="dataCompra">Data Compra</th>
-                                        <th data-translate="dataVencimento">Vencimento</th>
-                                        <th data-translate="comprovante">Comprovante</th>
-                                        <th data-translate="custo">Custo (₪)</th>
-                                        <th data-translate="venda">Venda (₪)</th>
-                                        <th data-translate="lucro">Lucro (₪)</th>
-                                        <th data-translate="status">Status</th>
-                                        <th data-translate="acoes">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="vendas-mes">
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+            <button class="btn btn-secondary ms-2" onclick="abrirConfiguracoes()">
+                <i class="bi bi-gear"></i> <span data-translate="configuracoes">Configurações</span>
+            </button>
+
+            <div class="btn-group ms-2">
+                <button class="btn btn-warning" onclick="realizarBackup()">
+                    <i class="bi bi-cloud-upload"></i> <span data-translate="backup">Backup</span>
+                </button>
+                <button class="btn btn-warning dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                    <span class="visually-hidden">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="realizarBackup('manual')">Manual</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="realizarBackup('auto')">Automático</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="restaurarBackup()">Restaurar</a></li>
+                </ul>
             </div>
-        </template>
+
+            <button class="btn btn-danger ms-2" id="btnLimpar" onclick="limparBancoDados()">
+                <i class="bi bi-trash"></i> <span data-translate="limparBanco">Limpar Banco</span>
+            </button>
+
+            <button class="btn btn-outline-secondary ms-2" onclick="toggleDebug()">
+                <i class="bi bi-bug"></i> Debug
+            </button>
+        </div>
+
+        <!-- Tabela de Vendas -->
+        <div id="todasVendas">
+            <!-- Vendas serão inseridas aqui -->
+        </div>
     </div>
-        <!-- Modal de Loading -->
+
+        <!-- Modais -->
+    <!-- Modal de Loading -->
     <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -500,21 +541,110 @@
         </div>
     </div>
 
-    <!-- Modal de Compartilhamento -->
-    <div class="modal fade" id="compartilharModal" tabindex="-1">
-        <div class="modal-dialog">
+    <!-- Modal de Relatórios -->
+    <div class="modal fade" id="relatoriosModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" data-translate="compartilhar">Compartilhar Venda</h5>
+                    <h5 class="modal-title" data-translate="relatorios">Relatórios</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="compartilhar-btns">
-                        <button class="btn btn-primary" onclick="compartilharVenda('email')">
-                            <i class="bi bi-envelope"></i> Email
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="list-group">
+                                <button class="list-group-item list-group-item-action active" onclick="selecionarRelatorio('vendas')">
+                                    <i class="bi bi-cart"></i> <span data-translate="relatorioVendas">Relatório de Vendas</span>
+                                </button>
+                                <button class="list-group-item list-group-item-action" onclick="selecionarRelatorio('financeiro')">
+                                    <i class="bi bi-cash"></i> <span data-translate="relatorioFinanceiro">Relatório Financeiro</span>
+                                </button>
+                                <button class="list-group-item list-group-item-action" onclick="selecionarRelatorio('produtos')">
+                                    <i class="bi bi-box"></i> <span data-translate="relatorioProdutos">Relatório de Produtos</span>
+                                </button>
+                                <button class="list-group-item list-group-item-action" onclick="selecionarRelatorio('clientes')">
+                                    <i class="bi bi-people"></i> <span data-translate="relatorioClientes">Relatório de Clientes</span>
+                                </button>
+                                <button class="list-group-item list-group-item-action" onclick="selecionarRelatorio('vencimentos')">
+                                    <i class="bi bi-calendar"></i> <span data-translate="relatorioVencimentos">Relatório de Vencimentos</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title" data-translate="filtros">Filtros</h6>
+                                    <div class="mb-3">
+                                        <label class="form-label" data-translate="periodo">Período</label>
+                                        <div class="input-group">
+                                            <input type="date" class="form-control" id="relatorioDataInicio">
+                                            <span class="input-group-text">até</span>
+                                            <input type="date" class="form-control" id="relatorioDataFim">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" data-translate="agruparPor">Agrupar por</label>
+                                        <select class="form-select" id="relatorioAgrupamento">
+                                            <option value="dia" data-translate="dia">Dia</option>
+                                            <option value="semana" data-translate="semana">Semana</option>
+                                            <option value="mes" data-translate="mes">Mês</option>
+                                            <option value="ano" data-translate="ano">Ano</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" data-translate="formato">Formato</label>
+                                        <select class="form-select" id="relatorioFormato">
+                                            <option value="pdf">PDF</option>
+                                            <option value="excel">Excel</option>
+                                            <option value="csv">CSV</option>
+                                        </select>
+                                    </div>
+                                    <button class="btn btn-primary w-100" onclick="gerarRelatorio()">
+                                        <i class="bi bi-file-earmark-text"></i> <span data-translate="gerarRelatorio">Gerar Relatório</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Backup -->
+    <div class="modal fade" id="backupModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" data-translate="backup">Backup</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <h6 data-translate="backupManual">Backup Manual</h6>
+                        <button class="btn btn-primary w-100 mb-2" onclick="realizarBackupManual()">
+                            <i class="bi bi-download"></i> <span data-translate="baixarBackup">Baixar Backup</span>
                         </button>
-                        <button class="btn btn-whatsapp" onclick="compartilharVenda('whatsapp')">
-                            <i class="bi bi-whatsapp"></i> WhatsApp
+                    </div>
+                    <div class="mb-3">
+                        <h6 data-translate="backupAutomatico">Backup Automático</h6>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="backupAutomatico">
+                            <label class="form-check-label" data-translate="ativarBackupAutomatico">
+                                Ativar backup automático
+                            </label>
+                        </div>
+                        <select class="form-select mb-2" id="frequenciaBackup">
+                            <option value="diario" data-translate="diario">Diário</option>
+                            <option value="semanal" data-translate="semanal">Semanal</option>
+                            <option value="mensal" data-translate="mensal">Mensal</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <h6 data-translate="restaurarBackup">Restaurar Backup</h6>
+                        <input type="file" class="form-control mb-2" id="arquivoBackup" accept=".json">
+                        <button class="btn btn-warning w-100" onclick="restaurarBackupArquivo()">
+                            <i class="bi bi-upload"></i> <span data-translate="restaurar">Restaurar</span>
                         </button>
                     </div>
                 </div>
@@ -522,21 +652,7 @@
         </div>
     </div>
 
-    <!-- Modal de Visualização de Comprovante -->
-    <div class="modal fade" id="comprovanteModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" data-translate="visualizarComprovante">Visualizar Comprovante</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body text-center">
-                    <img id="comprovanteImg" src="" class="img-fluid" alt="Comprovante">
-                </div>
-            </div>
-        </div>
-    </div>
-        <!-- Modal de Configuração -->
+    <!-- Modal de Configurações -->
     <div class="modal fade" id="configModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -545,98 +661,192 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <h6 data-translate="produtosPreDeterminados">Produtos Pré-determinados</h6>
-                        <div class="row">
-                            <div class="col-md-8">
-                                <input type="text" class="form-control" id="novoProduto" 
-                                       data-translate-placeholder="digiteProduto" 
-                                       placeholder="Digite o nome do produto">
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabGeral">
+                                <i class="bi bi-gear"></i> <span data-translate="geral">Geral</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabProdutos">
+                                <i class="bi bi-box"></i> <span data-translate="produtos">Produtos</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" data
+                                                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabNotificacoes">
+                                <i class="bi bi-bell"></i> <span data-translate="notificacoes">Notificações</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabBackup">
+                                <i class="bi bi-cloud"></i> <span data-translate="backup">Backup</span>
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content mt-3">
+                        <!-- Aba Geral -->
+                        <div class="tab-pane fade show active" id="tabGeral">
+                            <div class="mb-3">
+                                <label class="form-label" data-translate="idiomaPadrao">Idioma Padrão</label>
+                                <select class="form-select" id="idiomaPadrao">
+                                    <option value="pt">Português</option>
+                                    <option value="he">עברית (Hebraico)</option>
+                                </select>
                             </div>
-                            <div class="col-md-4">
-                                <button class="btn btn-primary w-100" onclick="adicionarProduto()">
-                                    <i class="bi bi-plus-circle"></i> <span data-translate="adicionar">Adicionar</span>
-                                </button>
+                            <div class="mb-3">
+                                <label class="form-label" data-translate="moeda">Moeda</label>
+                                <select class="form-select" id="moedaPadrao">
+                                    <option value="₪">₪ (Shekel)</option>
+                                    <option value="$">$ (Dólar)</option>
+                                    <option value="€">€ (Euro)</option>
+                                    <option value="R$">R$ (Real)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" data-translate="formatoData">Formato de Data</label>
+                                <select class="form-select" id="formatoData">
+                                    <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                                    <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                                </select>
                             </div>
                         </div>
-                        <div class="mt-3">
-                            <ul class="list-group" id="listaProdutos">
-                                <!-- Produtos serão inseridos aqui -->
-                            </ul>
+
+                        <!-- Aba Produtos -->
+                        <div class="tab-pane fade" id="tabProdutos">
+                            <div class="mb-3">
+                                <h6 data-translate="produtosPreDeterminados">Produtos Pré-determinados</h6>
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <input type="text" class="form-control" id="novoProduto" 
+                                               data-translate-placeholder="digiteProduto" 
+                                               placeholder="Digite o nome do produto">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button class="btn btn-primary w-100" onclick="adicionarProduto()">
+                                            <i class="bi bi-plus-circle"></i> <span data-translate="adicionar">Adicionar</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <ul class="list-group" id="listaProdutos">
+                                        <!-- Produtos serão inseridos aqui -->
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <h6 data-translate="categorias">Categorias</h6>
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <input type="text" class="form-control" id="novaCategoria" 
+                                               data-translate-placeholder="digiteCategoria" 
+                                               placeholder="Digite o nome da categoria">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button class="btn btn-primary w-100" onclick="adicionarCategoria()">
+                                            <i class="bi bi-plus-circle"></i> <span data-translate="adicionar">Adicionar</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <ul class="list-group" id="listaCategorias">
+                                        <!-- Categorias serão inseridas aqui -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aba Notificações -->
+                        <div class="tab-pane fade" id="tabNotificacoes">
+                            <div class="mb-3">
+                                <h6 data-translate="alertasVencimento">Alertas de Vencimento</h6>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="alertaEmail">
+                                    <label class="form-check-label" data-translate="alertasPorEmail">
+                                        Receber alertas por email
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="alertaNavegador">
+                                    <label class="form-check-label" data-translate="alertasNavegador">
+                                        Notificações no navegador
+                                    </label>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label" data-translate="diasAntesVencimento">
+                                        Dias antes do vencimento para alertar
+                                    </label>
+                                    <input type="number" class="form-control" id="diasAlerta" min="1" max="30" value="7">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <h6 data-translate="emailsAutomaticos">Emails Automáticos</h6>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="emailNovaVenda">
+                                    <label class="form-check-label" data-translate="emailNovaVenda">
+                                        Enviar email ao registrar nova venda
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="emailVencimento">
+                                    <label class="form-check-label" data-translate="emailVencimento">
+                                        Enviar email no vencimento
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aba Backup -->
+                        <div class="tab-pane fade" id="tabBackup">
+                            <div class="mb-3">
+                                <h6 data-translate="backupAutomatico">Backup Automático</h6>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="backupAutomatico">
+                                    <label class="form-check-label" data-translate="ativarBackupAutomatico">
+                                        Ativar backup automático
+                                    </label>
+                                </div>
+                                <select class="form-select mb-2" id="frequenciaBackup">
+                                    <option value="diario" data-translate="diario">Diário</option>
+                                    <option value="semanal" data-translate="semanal">Semanal</option>
+                                    <option value="mensal" data-translate="mensal">Mensal</option>
+                                </select>
+                                <input type="time" class="form-control" id="horaBackup" value="00:00">
+                            </div>
+                            <div class="mb-3">
+                                <h6 data-translate="historicoBackups">Histórico de Backups</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th data-translate="data">Data</th>
+                                                <th data-translate="tamanho">Tamanho</th>
+                                                <th data-translate="acoes">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="listaBackups">
+                                            <!-- Backups serão inseridos aqui -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-translate="cancelar">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="salvarConfiguracoes()" data-translate="salvar">
+                        Salvar
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Balanço -->
-    <div class="modal fade" id="balancoModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" data-translate="balancoGeral">Balanço Geral</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h6 class="card-title" data-translate="resumoGeral">Resumo Geral</h6>
-                                    <ul class="list-group list-group-flush">
-                                        <li class="list-group-item d-flex justify-content-between">
-                                            <span data-translate="totalVendas">Total de Vendas</span>
-                                            <span id="balancoTotalVendas">0</span>
-                                        </li>
-                                        <li class="list-group-item d-flex justify-content-between">
-                                            <span data-translate="custoTotal">Custo Total</span>
-                                            <span class="text-danger currency" id="balancoCustoTotal">0.00</span>
-                                        </li>
-                                        <li class="list-group-item d-flex justify-content-between">
-                                            <span data-translate="vendaTotal">Venda Total</span>
-                                            <span class="text-primary currency" id="balancoVendaTotal">0.00</span>
-                                        </li>
-                                        <li class="list-group-item d-flex justify-content-between">
-                                            <span data-translate="lucroTotal">Lucro Total</span>
-                                            <span class="text-success currency" id="balancoLucroTotal">0.00</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h6 class="card-title" data-translate="statusPagamentos">Status dos Pagamentos</h6>
-                                    <ul class="list-group list-group-flush">
-                                        <li class="list-group-item d-flex justify-content-between">
-                                            <span data-translate="vendasPagas">Vendas Pagas</span>
-                                            <span id="balancoVendasPagas">0</span>
-                                        </li>
-                                        <li class="list-group-item d-flex justify-content-between">
-                                            <span data-translate="vendasPendentes">Vendas Pendentes</span>
-                                            <span id="balancoVendasPendentes">0</span>
-                                        </li>
-                                        <li class="list-group-item d-flex justify-content-between">
-                                            <span data-translate="valorPago">Valor Pago</span>
-                                            <span class="text-success currency" id="balancoValorPago">0.00</span>
-                                        </li>
-                                        <li class="list-group-item d-flex justify-content-between">
-                                            <span data-translate="valorPendente">Valor Pendente</span>
-                                            <span class="text-warning currency" id="balancoValorPendente">0.00</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Scripts do Bootstrap -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Scripts -->
+    <script src="app.js"></script>
 </body>
 </html>
